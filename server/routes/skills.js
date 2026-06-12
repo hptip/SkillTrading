@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
         take: parseInt(limit),
         include: {
           teacher: {
-            select: { id: true, fullName: true, avatar: true }
+            select: { id: true, fullName: true, avatar: true, avgRating: true, totalReviews: true }
           },
           _count: { select: { bookings: true } }
         }
@@ -93,7 +93,7 @@ router.get('/:id', async (req, res) => {
       where: { id: parseInt(req.params.id) },
       include: {
         teacher: {
-          select: { id: true, fullName: true, avatar: true, bio: true, createdAt: true }
+          select: { id: true, fullName: true, avatar: true, bio: true, avgRating: true, totalReviews: true, createdAt: true }
         },
         reviews: {
           orderBy: { createdAt: 'desc' },

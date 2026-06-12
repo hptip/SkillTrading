@@ -211,7 +211,9 @@ export const AdminUsersPage = () => {
               </div>
             </div>
 
-            {selectedUser.bio && <p className="text-gray-600 text-sm">{selectedUser.bio as string}</p>}
+            {!!(selectedUser.bio as string | undefined) && (
+              <p className="text-gray-600 text-sm">{selectedUser.bio as string}</p>
+            )}
 
             <div>
               <h4 className="font-semibold text-gray-900 mb-2">Recent Transactions</h4>

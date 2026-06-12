@@ -22,6 +22,8 @@ const authenticate = async (req, res, next) => {
         role: true,
         status: true,
         skc: true,
+        avgRating: true,
+        totalReviews: true,
         avatar: true,
         bio: true,
       }

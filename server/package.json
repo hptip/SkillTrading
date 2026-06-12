@@ -1,12 +1,14 @@
 {
   "name": "skill-trading-backend",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "build": "prisma generate && prisma migrate deploy",
-    "seed": "node prisma/seed.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "build": "prisma generate --schema prisma/schema.prisma && prisma migrate deploy --schema prisma/schema.prisma",
+    "seed": "node seed.js"
+  },
+  "prisma": {
+    "seed": "node seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

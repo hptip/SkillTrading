@@ -53,6 +53,8 @@ model User {
   role             UserRole      @default(USER)
   status           UserStatus    @default(ACTIVE)
   skc              Float         @default(0)
+  avgRating        Float         @default(0)
+  totalReviews     Int           @default(0)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -87,7 +89,7 @@ model Booking {
   teacherId     Int
   skillId       Int
   scheduledAt   DateTime
-  durationHours Int           @default(1)
+  durationHours Float         @default(1)
   totalPrice    Float
   status        BookingStatus @default(PENDING)
   message       String?

@@ -197,7 +197,7 @@ export const AdminBookingsPage = () => {
               >
                 <span className="text-2xl font-bold text-emerald-600">100%</span>
                 <span className="text-xs text-emerald-600 mt-1">Pay Teacher</span>
-                <span className="text-xs text-gray-400">{(disputeModal.totalPrice * 0.95).toFixed(0)} SKC (95%)</span>
+                <span className="text-xs text-gray-400">{disputeModal.totalPrice.toFixed(0)} SKC</span>
               </button>
             </div>
 

@@ -13,6 +13,8 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   skc: number;
+  avgRating?: number;
+  totalReviews?: number;
   createdAt?: string;
 }
 
@@ -25,7 +27,7 @@ export interface Skill {
   status: SkillStatus;
   rejectReason?: string;
   teacherId: number;
-  teacher?: Pick<User, 'id' | 'fullName' | 'avatar' | 'bio' | 'createdAt'>;
+  teacher?: Pick<User, 'id' | 'fullName' | 'avatar' | 'bio' | 'avgRating' | 'totalReviews' | 'createdAt'>;
   avgRating: number;
   totalReviews: number;
   createdAt: string;

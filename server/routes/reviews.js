@@ -104,6 +104,20 @@ router.post('/', authenticate, async (req, res) => {
         }
       });
 
+      const teacherReviews = await tx.review.aggregate({
+        where: { teacherId: booking.teacherId },
+        _avg: { rating: true },
+        _count: { rating: true }
+      });
+
+      await tx.user.update({
+        where: { id: booking.teacherId },
+        data: {
+          avgRating: teacherReviews._avg.rating || 0,
+          totalReviews: teacherReviews._count.rating
+        }
+      });
+
       return newReview;
     });
 

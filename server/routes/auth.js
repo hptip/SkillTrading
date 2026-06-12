@@ -46,6 +46,8 @@ router.post('/register', async (req, res) => {
         role: true,
         status: true,
         skc: true,
+        avgRating: true,
+        totalReviews: true,
         avatar: true,
         bio: true,
       }
@@ -105,6 +107,8 @@ router.get('/me', authenticate, async (req, res) => {
         role: true,
         status: true,
         skc: true,
+        avgRating: true,
+        totalReviews: true,
         avatar: true,
         bio: true,
         createdAt: true,
@@ -131,6 +135,8 @@ router.put('/profile', authenticate, async (req, res) => {
         role: true,
         status: true,
         skc: true,
+        avgRating: true,
+        totalReviews: true,
         avatar: true,
         bio: true,
       }

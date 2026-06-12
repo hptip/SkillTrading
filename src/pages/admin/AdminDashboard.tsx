@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../../lib/api';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
-import { Badge, statusBadge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Users, BookOpen, Calendar, Coins, Clock, AlertTriangle, Check, X } from 'lucide-react';

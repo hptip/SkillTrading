@@ -2,41 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { createTransaction, expirePendingBookings } = require('../lib/bookingRules');
 
 const prisma = new PrismaClient();
 
 // Apply auth + admin middleware to all routes
 router.use(authenticate, requireAdmin);
 
-// Helper: create transaction
-async function createTransaction(prismaClient, userId, type, amount, description, bookingId = null) {
-  const user = await prismaClient.user.findUnique({ where: { id: userId } });
-  const balanceBefore = user.skc;
-  const balanceAfter = Math.max(0, balanceBefore + amount);
-
-  await prismaClient.user.update({
-    where: { id: userId },
-    data: { skc: balanceAfter }
-  });
-
-  await prismaClient.transaction.create({
-    data: {
-      userId,
-      type,
-      amount,
-      balanceBefore,
-      balanceAfter,
-      description,
-      bookingId
-    }
-  });
-
-  return balanceAfter;
-}
-
 // Dashboard stats
 router.get('/dashboard', async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const [
       totalUsers, totalSkills, totalBookings,
       pendingSkills, disputedBookings,
@@ -301,6 +278,8 @@ router.delete('/skills/:id', async (req, res) => {
 // ===== BOOKING MANAGEMENT =====
 router.get('/bookings', async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const { status, page = 1, limit = 20 } = req.query;
     const where = {};
     if (status) where.status = status;
@@ -341,6 +320,9 @@ router.put('/bookings/:id/resolve-dispute', async (req, res) => {
     if (booking.status !== 'DISPUTED') {
       return res.status(400).json({ message: 'Booking is not in DISPUTED status' });
     }
+    if (!['learner_full', 'teacher_full', 'split'].includes(resolution)) {
+      return res.status(400).json({ message: 'Invalid dispute resolution' });
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
@@ -352,13 +334,13 @@ router.put('/bookings/:id/resolve-dispute', async (req, res) => {
         await createTransaction(tx, booking.learnerId, 'REFUND', booking.totalPrice,
           `Dispute resolved: Full refund to learner`, bookingId);
       } else if (resolution === 'teacher_full') {
-        await createTransaction(tx, booking.teacherId, 'EARN', booking.totalPrice * 0.95,
-          `Dispute resolved: Full payment to teacher (95%)`, bookingId);
+        await createTransaction(tx, booking.teacherId, 'EARN', booking.totalPrice,
+          `Dispute resolved: Full payment to teacher`, bookingId);
       } else if (resolution === 'split') {
         const half = booking.totalPrice / 2;
         await createTransaction(tx, booking.learnerId, 'REFUND', half,
           `Dispute resolved: 50% refund to learner`, bookingId);
-        await createTransaction(tx, booking.teacherId, 'EARN', half * 0.95,
+        await createTransaction(tx, booking.teacherId, 'EARN', half,
           `Dispute resolved: 50% payment to teacher`, bookingId);
       }
     });

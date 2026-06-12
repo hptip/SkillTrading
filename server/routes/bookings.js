@@ -2,38 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const {
+  ACTIVE_BOOKING_STATUSES,
+  bookingsOverlap,
+  createTransaction,
+  expirePendingBookings,
+  getBookingEndAt,
+  roundSkc,
+} = require('../lib/bookingRules');
 
 const prisma = new PrismaClient();
-
-// Helper: create transaction
-async function createTransaction(prismaClient, userId, type, amount, description, bookingId = null) {
-  const user = await prismaClient.user.findUnique({ where: { id: userId } });
-  const balanceBefore = user.skc;
-  const balanceAfter = balanceBefore + amount;
-
-  await prismaClient.user.update({
-    where: { id: userId },
-    data: { skc: balanceAfter }
-  });
-
-  await prismaClient.transaction.create({
-    data: {
-      userId,
-      type,
-      amount,
-      balanceBefore,
-      balanceAfter,
-      description,
-      bookingId
-    }
-  });
-
-  return balanceAfter;
-}
 
 // Get my bookings
 router.get('/my', authenticate, async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const { role, status } = req.query;
     const where = {};
 
@@ -51,7 +35,7 @@ router.get('/my', authenticate, async (req, res) => {
         learner: { select: { id: true, fullName: true, avatar: true } },
         teacher: { select: { id: true, fullName: true, avatar: true } },
         review: true,
-      }
+      },
     });
 
     res.json(bookings);
@@ -64,6 +48,8 @@ router.get('/my', authenticate, async (req, res) => {
 // Get booking by ID
 router.get('/:id', authenticate, async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const booking = await prisma.booking.findUnique({
       where: { id: parseInt(req.params.id) },
       include: {
@@ -72,7 +58,7 @@ router.get('/:id', authenticate, async (req, res) => {
         teacher: { select: { id: true, fullName: true, avatar: true, email: true } },
         review: true,
         transactions: true,
-      }
+      },
     });
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -91,10 +77,23 @@ router.get('/:id', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { skillId, scheduledAt, durationHours = 1, message } = req.body;
+    const parsedSkillId = parseInt(skillId);
+    const duration = Number(durationHours);
+    const scheduledDate = new Date(scheduledAt);
+
+    if (!parsedSkillId || Number.isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({ message: 'Skill and schedule are required' });
+    }
+    if (!Number.isFinite(duration) || duration < 0.5 || duration > 8) {
+      return res.status(400).json({ message: 'Duration must be between 0.5 and 8 hours' });
+    }
+    if (scheduledDate <= new Date()) {
+      return res.status(400).json({ message: 'Scheduled time must be in the future' });
+    }
 
     const skill = await prisma.skill.findUnique({
-      where: { id: parseInt(skillId) },
-      include: { teacher: true }
+      where: { id: parsedSkillId },
+      include: { teacher: true },
     });
 
     if (!skill) return res.status(404).json({ message: 'Skill not found' });
@@ -102,60 +101,80 @@ router.post('/', authenticate, async (req, res) => {
     if (skill.teacherId === req.user.id) {
       return res.status(400).json({ message: 'Cannot book your own skill' });
     }
-
-    const totalPrice = skill.price * parseInt(durationHours);
-
-    if (req.user.skc < totalPrice) {
-      return res.status(400).json({ message: `Insufficient SKC. You need ${totalPrice} SKC but have ${req.user.skc} SKC` });
+    if (skill.teacher.status !== 'ACTIVE') {
+      return res.status(400).json({ message: 'Teacher account is not active' });
     }
 
-    // Check time conflict for learner
-    const scheduledDate = new Date(scheduledAt);
-    const endDate = new Date(scheduledDate.getTime() + parseInt(durationHours) * 60 * 60 * 1000);
+    const totalPrice = roundSkc(skill.price * duration);
+    const learner = await prisma.user.findUnique({ where: { id: req.user.id } });
 
-    const conflictingBooking = await prisma.booking.findFirst({
+    if (!learner || learner.skc < totalPrice) {
+      return res.status(400).json({
+        message: `Insufficient SKC. You need ${totalPrice} SKC but have ${learner?.skc || 0} SKC`,
+      });
+    }
+
+    const endDate = new Date(scheduledDate.getTime() + duration * 60 * 60 * 1000);
+    const relatedActiveBookings = await prisma.booking.findMany({
       where: {
-        learnerId: req.user.id,
-        status: { in: ['PENDING', 'CONFIRMED'] },
-        scheduledAt: {
-          gte: new Date(scheduledDate.getTime() - parseInt(durationHours) * 60 * 60 * 1000),
-          lte: endDate
-        }
-      }
+        status: { in: ACTIVE_BOOKING_STATUSES },
+        OR: [
+          { learnerId: req.user.id },
+          { teacherId: req.user.id },
+          { learnerId: skill.teacherId },
+          { teacherId: skill.teacherId },
+        ],
+      },
+      select: {
+        id: true,
+        learnerId: true,
+        teacherId: true,
+        scheduledAt: true,
+        durationHours: true,
+      },
     });
 
+    const conflictingBooking = relatedActiveBookings.find((booking) => (
+      bookingsOverlap(scheduledDate, endDate, new Date(booking.scheduledAt), getBookingEndAt(booking))
+    ));
+
     if (conflictingBooking) {
-      return res.status(400).json({ message: 'You have a conflicting booking at this time' });
+      const isTeacherConflict = conflictingBooking.learnerId === skill.teacherId
+        || conflictingBooking.teacherId === skill.teacherId;
+      return res.status(400).json({
+        message: isTeacherConflict
+          ? 'Teacher already has an active booking at this time'
+          : 'You already have an active booking at this time',
+      });
     }
 
     const booking = await prisma.$transaction(async (tx) => {
-      // Deduct SKC from learner (HOLD)
-      await createTransaction(tx, req.user.id, 'HOLD', -totalPrice,
-        `SKC held for booking skill: ${skill.title}`, null);
-
       const newBooking = await tx.booking.create({
         data: {
           learnerId: req.user.id,
           teacherId: skill.teacherId,
           skillId: skill.id,
           scheduledAt: scheduledDate,
-          durationHours: parseInt(durationHours),
+          durationHours: duration,
           totalPrice,
           message,
-          status: 'PENDING'
+          status: 'PENDING',
         },
         include: {
           skill: { select: { id: true, title: true, category: true } },
           learner: { select: { id: true, fullName: true, avatar: true } },
           teacher: { select: { id: true, fullName: true, avatar: true } },
-        }
+        },
       });
 
-      // Update transaction with booking ID
-      await tx.transaction.updateMany({
-        where: { userId: req.user.id, type: 'HOLD', bookingId: null },
-        data: { bookingId: newBooking.id }
-      });
+      await createTransaction(
+        tx,
+        req.user.id,
+        'HOLD',
+        -totalPrice,
+        `SKC held for booking skill: ${skill.title}`,
+        newBooking.id
+      );
 
       return newBooking;
     });
@@ -163,17 +182,22 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json(booking);
   } catch (error) {
     console.error('Create booking error:', error);
-    res.status(500).json({ message: 'Server error' });
+    const message = error.message === 'SKC balance cannot be negative'
+      ? 'Insufficient SKC'
+      : 'Server error';
+    res.status(message === 'Insufficient SKC' ? 400 : 500).json({ message });
   }
 });
 
 // Confirm booking (Teacher)
 router.put('/:id/confirm', authenticate, async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const bookingId = parseInt(req.params.id);
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { skill: true }
+      include: { skill: true },
     });
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -184,7 +208,7 @@ router.put('/:id/confirm', authenticate, async (req, res) => {
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CONFIRMED' }
+      data: { status: 'CONFIRMED' },
     });
 
     res.json(updated);
@@ -196,11 +220,13 @@ router.put('/:id/confirm', authenticate, async (req, res) => {
 // Reject booking (Teacher)
 router.put('/:id/reject', authenticate, async (req, res) => {
   try {
+    await expirePendingBookings(prisma);
+
     const bookingId = parseInt(req.params.id);
     const { reason } = req.body;
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { skill: true, learner: true }
+      include: { skill: true, learner: true },
     });
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -212,12 +238,17 @@ router.put('/:id/reject', authenticate, async (req, res) => {
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'CANCELLED', cancelReason: reason || 'Rejected by teacher' }
+        data: { status: 'CANCELLED', cancelReason: reason || 'Rejected by teacher' },
       });
 
-      // Refund 100% to learner
-      await createTransaction(tx, booking.learnerId, 'REFUND', booking.totalPrice,
-        `Refund for rejected booking: ${booking.skill.title}`, bookingId);
+      await createTransaction(
+        tx,
+        booking.learnerId,
+        'REFUND',
+        booking.totalPrice,
+        `Refund for rejected booking: ${booking.skill.title}`,
+        bookingId
+      );
     });
 
     res.json({ message: 'Booking rejected and refund issued' });
@@ -232,7 +263,7 @@ router.put('/:id/complete', authenticate, async (req, res) => {
     const bookingId = parseInt(req.params.id);
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { skill: true }
+      include: { skill: true },
     });
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -243,18 +274,23 @@ router.put('/:id/complete', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Booking must be CONFIRMED to complete' });
     }
 
-    const teacherEarning = booking.totalPrice * 0.95;
-    const platformFee = booking.totalPrice * 0.05;
+    const teacherEarning = roundSkc(booking.totalPrice * 0.95);
+    const platformFee = roundSkc(booking.totalPrice * 0.05);
 
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'COMPLETED' }
+        data: { status: 'COMPLETED' },
       });
 
-      // Pay teacher 95%
-      await createTransaction(tx, booking.teacherId, 'EARN', teacherEarning,
-        `Payment for completed session: ${booking.skill.title} (95% after 5% platform fee)`, bookingId);
+      await createTransaction(
+        tx,
+        booking.teacherId,
+        'EARN',
+        teacherEarning,
+        `Payment for completed session: ${booking.skill.title} (95% after 5% platform fee)`,
+        bookingId
+      );
     });
 
     res.json({ message: 'Booking completed successfully', teacherEarning, platformFee });
@@ -264,14 +300,14 @@ router.put('/:id/complete', authenticate, async (req, res) => {
   }
 });
 
-// Cancel booking (Learner)
+// Cancel booking (Learner or Teacher)
 router.put('/:id/cancel', authenticate, async (req, res) => {
   try {
     const bookingId = parseInt(req.params.id);
     const { reason } = req.body;
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { skill: true }
+      include: { skill: true },
     });
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -280,7 +316,7 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
     const isTeacher = booking.teacherId === req.user.id;
 
     if (!isLearner && !isTeacher) return res.status(403).json({ message: 'Forbidden' });
-    if (!['PENDING', 'CONFIRMED'].includes(booking.status)) {
+    if (!ACTIVE_BOOKING_STATUSES.includes(booking.status)) {
       return res.status(400).json({ message: 'Cannot cancel this booking' });
     }
 
@@ -288,17 +324,15 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
     let refundDesc = '';
 
     if (isTeacher) {
-      // Teacher cancels: 100% refund
       refundAmount = booking.totalPrice;
       refundDesc = `Full refund - Teacher cancelled: ${booking.skill.title}`;
     } else {
-      // Learner cancels: check time
       const hoursUntilSession = (new Date(booking.scheduledAt) - new Date()) / (1000 * 60 * 60);
       if (hoursUntilSession >= 24) {
         refundAmount = booking.totalPrice;
         refundDesc = `Full refund - Cancelled 24h+ before session: ${booking.skill.title}`;
       } else {
-        refundAmount = booking.totalPrice * 0.5;
+        refundAmount = roundSkc(booking.totalPrice * 0.5);
         refundDesc = `50% refund - Cancelled within 24h: ${booking.skill.title}`;
       }
     }
@@ -306,7 +340,7 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'CANCELLED', cancelReason: reason || 'Cancelled by user' }
+        data: { status: 'CANCELLED', cancelReason: reason || 'Cancelled by user' },
       });
 
       if (refundAmount > 0) {
@@ -335,10 +369,13 @@ router.put('/:id/dispute', authenticate, async (req, res) => {
     if (booking.status !== 'CONFIRMED') {
       return res.status(400).json({ message: 'Can only dispute confirmed bookings' });
     }
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'Dispute reason is required' });
+    }
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'DISPUTED', disputeReason: reason }
+      data: { status: 'DISPUTED', disputeReason: reason },
     });
 
     res.json(updated);
