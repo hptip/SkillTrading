@@ -3,10 +3,36 @@ require('dotenv').config();
 const cors = require('cors');
 const express = require('express');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const prisma = new PrismaClient();
+
+async function ensureDefaultAdmin() {
+  const adminEmail = 'admin@skilltrading.com';
+  const adminPassword = await bcrypt.hash('admin123', 10);
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      fullName: 'Admin User',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      password: adminPassword,
+    },
+    create: {
+      email: adminEmail,
+      password: adminPassword,
+      fullName: 'Admin User',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      skc: 0,
+    },
+  });
+
+  console.log('Admin account ready:', adminEmail);
+}
 
 const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
@@ -50,6 +76,8 @@ async function main() {
   try {
     await prisma.$connect();
     console.log('Database connected');
+
+    await ensureDefaultAdmin();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);

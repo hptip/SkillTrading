@@ -136,7 +136,8 @@ router.post('/', authenticate, async (req, res) => {
         category,
         price: parseFloat(price),
         teacherId: req.user.id,
-        status: 'PENDING'
+        status: 'APPROVED',
+        rejectReason: null
       },
       include: {
         teacher: { select: { id: true, fullName: true, avatar: true } }
@@ -182,7 +183,7 @@ router.put('/:id', authenticate, async (req, res) => {
         description,
         category,
         price: price ? parseFloat(price) : undefined,
-        status: 'PENDING', // Re-submit for approval
+        status: 'APPROVED',
         rejectReason: null,
       }
     });
