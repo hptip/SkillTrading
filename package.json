@@ -1,31 +1,17 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "skill-trading",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "cd frontend && npm install && npm run build && cd .. && mkdir -p backend/public && cp -r frontend/dist/* backend/public/ && cd backend && npm install && npx prisma generate && npx prisma migrate deploy",
+    "start": "cd backend && node src/server.js"
   },
+
+
   "dependencies": {
-    "axios": "^1.17.0",
-    "clsx": "2.1.1",
-    "date-fns": "^4.4.0",
-    "lucide-react": "^1.17.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "react-router-dom": "^7.17.0",
-    "tailwind-merge": "3.4.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "4.1.17",
-    "@types/node": "22.19.17",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
+    "vite": "7.3.2",
     "@vitejs/plugin-react": "5.1.1",
-    "tailwindcss": "4.1.17",
-    "typescript": "5.9.3",
-    "vite": "7.3.2"
+    "@tailwindcss/vite": "4.1.17",
+    "tailwindcss": "4.1.17"
   }
 }
