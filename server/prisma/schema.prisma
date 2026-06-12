@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum SkillStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum TransactionType {
+  BONUS
+  HOLD
+  RELEASE
+  EARN
+  SPEND
+  REFUND
+  ADJUST
+  FEE
+}
+
+model User {
+  id               Int           @id @default(autoincrement())
+  email            String        @unique
+  password         String
+  fullName         String
+  bio              String?
+  avatar           String?
+  role             UserRole      @default(USER)
+  status           UserStatus    @default(ACTIVE)
+  skc              Float         @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  skills           Skill[]
+  bookingsAsLearner Booking[]    @relation("LearnerBookings")
+  bookingsAsTeacher Booking[]    @relation("TeacherBookings")
+  transactions     Transaction[]
+  reviews          Review[]
+}
+
+model Skill {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String
+  category    String
+  price       Float
+  status      SkillStatus @default(PENDING)
+  rejectReason String?
+  teacherId   Int
+  teacher     User        @relation(fields: [teacherId], references: [id])
+  bookings    Booking[]
+  reviews     Review[]
+  avgRating   Float       @default(0)
+  totalReviews Int        @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Booking {
+  id            Int           @id @default(autoincrement())
+  learnerId     Int
+  teacherId     Int
+  skillId       Int
+  scheduledAt   DateTime
+  durationHours Int           @default(1)
+  totalPrice    Float
+  status        BookingStatus @default(PENDING)
+  message       String?
+  disputeReason String?
+  cancelReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  learner       User          @relation("LearnerBookings", fields: [learnerId], references: [id])
+  teacher       User          @relation("TeacherBookings", fields: [teacherId], references: [id])
+  skill         Skill         @relation(fields: [skillId], references: [id])
+  review        Review?
+  transactions  Transaction[]
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  bookingId Int      @unique
+  learnerId Int
+  skillId   Int
+  teacherId Int
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  learner   User     @relation(fields: [learnerId], references: [id])
+  skill     Skill    @relation(fields: [skillId], references: [id])
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  userId      Int
+  type        TransactionType
+  amount      Float
+  balanceBefore Float
+  balanceAfter  Float
+  description String
+  bookingId   Int?
+  createdAt   DateTime        @default(now())
+
+  user        User            @relation(fields: [userId], references: [id])
+  booking     Booking?        @relation(fields: [bookingId], references: [id])
+}
