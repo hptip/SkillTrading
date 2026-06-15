@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { skillsApi } from '../lib/api';
+import { skillsApi, uploadsApi } from '../lib/api';
 import { AvailabilitySlot, Skill } from '../types';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge, statusBadge } from '../components/ui/Badge';
@@ -95,25 +95,33 @@ export const MySkillsPage = () => {
     }));
   };
 
-  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('Không đọc được ảnh'));
-    reader.readAsDataURL(file);
-  });
-
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const dataUrl = await readFileAsDataUrl(file);
-    setForm((prev) => ({ ...prev, coverImage: dataUrl }));
+
+    try {
+      const res = await uploadsApi.uploadImages([file]);
+      const [url] = res.data.urls || [];
+      if (!url) throw new Error('Không nhận được URL ảnh');
+      setForm((prev) => ({ ...prev, coverImage: url }));
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Không thể tải ảnh lên.';
+      setError(message);
+    }
   };
 
   const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
-    const urls = await Promise.all(files.map((file) => readFileAsDataUrl(file)));
-    setForm((prev) => ({ ...prev, galleryImages: [...prev.galleryImages, ...urls] }));
+
+    try {
+      const res = await uploadsApi.uploadImages(files);
+      const urls = res.data.urls || [];
+      setForm((prev) => ({ ...prev, galleryImages: [...prev.galleryImages, ...urls] }));
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Không thể tải ảnh lên.';
+      setError(message);
+    }
   };
 
   const handleSubmit = async () => {

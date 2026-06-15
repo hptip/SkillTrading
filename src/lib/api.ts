@@ -45,6 +45,17 @@ export const authApi = {
 };
 
 // Skills
+export const uploadsApi = {
+  uploadImages: (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('images', file));
+
+    return api.post('/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
 export const skillsApi = {
   getAll: (params?: Record<string, string | number>) =>
     api.get('/skills', { params }),

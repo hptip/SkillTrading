@@ -69,6 +69,7 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/skills', require('./routes/skills'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/reviews', require('./routes/reviews'));
@@ -87,6 +88,7 @@ app.get('/api/health', async (req, res) => {
 
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../dist');
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
   app.use(express.static(frontendPath));
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
