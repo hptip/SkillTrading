@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { createTransaction, expirePendingBookings } = require('../lib/bookingRules');
-
-const prisma = new PrismaClient();
 
 // Apply auth + admin middleware to all routes
 router.use(authenticate, requireAdmin);

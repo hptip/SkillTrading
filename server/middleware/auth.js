@@ -1,7 +1,9 @@
-const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const prisma = new PrismaClient();
+const jwt = require('jsonwebtoken');
+const prisma = require('../lib/prisma');
+const JWT_SECRET = process.env.JWT_SECRET || 'skilltrading-render-secret-2026';
 
 const authenticate = async (req, res, next) => {
   try {
@@ -11,7 +13,7 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -44,6 +46,7 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error('JWT auth error:', error.message);
     return res.status(401).json({ message: 'Invalid token' });
   }
 };

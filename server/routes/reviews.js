@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
-
-const prisma = new PrismaClient();
 
 // Get reviews for a skill
 router.get('/skill/:skillId', async (req, res) => {

@@ -39,8 +39,8 @@ model Skill {
   rejectReason     String?
   teacherId        Int
   coverImage       String?
-  galleryImages    String?     @default("[]")
-  availabilitySlots String?    @default("[]")
+  galleryImages    Json?       @default("[]")
+  availabilitySlots Json?       @default("[]")
   timezone         String      @default("Asia/Ho_Chi_Minh")
   isPublished      Boolean     @default(false)
   teacher          User        @relation(fields: [teacherId], references: [id])

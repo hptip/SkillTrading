@@ -1,11 +1,12 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
-
-const prisma = new PrismaClient();
 
 // Register
 router.post('/register', async (req, res) => {
@@ -22,6 +23,7 @@ router.post('/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const JWT_SECRET = process.env.JWT_SECRET || 'skilltrading-render-secret-2026';
 
     const user = await prisma.user.create({
       data: {
@@ -53,7 +55,7 @@ router.post('/register', async (req, res) => {
       }
     });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({ user, token });
   } catch (error) {
@@ -89,7 +91,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    const JWT_SECRET = process.env.JWT_SECRET || 'skilltrading-render-secret-2026';
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     const { password: _, ...userWithoutPassword } = user;
     res.json({ user: userWithoutPassword, token });
