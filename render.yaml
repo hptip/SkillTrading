@@ -22,9 +22,9 @@ services:
       - key: FRONTEND_URL
         value: ""
 
-  - type: pserv
-    name: skill-trading-db
-    plan: free
-    region: singapore
+databases:
+  - name: skill-trading-db
     databaseName: skilltrading
     user: skilltrading
+    plan: free
+    region: singapore
