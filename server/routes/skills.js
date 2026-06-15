@@ -187,8 +187,8 @@ router.post('/', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Create skill error:', error);
 
-    const message = error?.code === 'P1017' || error?.code === 'P2021' || /closed the connection|ECONNRESET|ETIMEDOUT/i.test(String(error?.message || ''))
-      ? 'Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau hoặc kiểm tra cấu hình DATABASE_URL.'
+    const message = error?.code === 'P1017' || error?.code === 'P2021' || /closed the connection|ECONNRESET|ETIMEDOUT|SSL/i.test(String(error?.message || ''))
+      ? 'Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau hoặc kiểm tra lại DATABASE_URL trên Render/local.'
       : 'Không thể tạo khóa học. Vui lòng kiểm tra dữ liệu và thử lại.';
 
     res.status(500).json({ message });

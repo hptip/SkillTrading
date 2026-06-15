@@ -158,7 +158,9 @@ export const MySkillsPage = () => {
       await fetchSkills();
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(apiError?.response?.data?.message || apiError?.message || 'Không thể lưu khóa học. Vui lòng thử lại.');
+      const message = apiError?.response?.data?.message || apiError?.message || 'Không thể lưu khóa học. Vui lòng thử lại.';
+
+      setError(message);
     } finally {
       setSubmitting(false);
     }
