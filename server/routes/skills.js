@@ -186,7 +186,12 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json(skill);
   } catch (error) {
     console.error('Create skill error:', error);
-    res.status(500).json({ message: 'Server error' });
+
+    const message = error?.code === 'P1017' || error?.code === 'P2021' || /closed the connection|ECONNRESET|ETIMEDOUT/i.test(String(error?.message || ''))
+      ? 'Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau hoặc kiểm tra cấu hình DATABASE_URL.'
+      : 'Không thể tạo khóa học. Vui lòng kiểm tra dữ liệu và thử lại.';
+
+    res.status(500).json({ message });
   }
 });
 
@@ -251,7 +256,13 @@ router.put('/:id', authenticate, async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update skill error:', error);
+
+    const message = error?.code === 'P1017' || error?.code === 'P2021' || /closed the connection|ECONNRESET|ETIMEDOUT/i.test(String(error?.message || ''))
+      ? 'Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại sau hoặc kiểm tra cấu hình DATABASE_URL.'
+      : 'Không thể cập nhật khóa học. Vui lòng kiểm tra dữ liệu và thử lại.';
+
+    res.status(500).json({ message });
   }
 });
 

@@ -58,8 +58,14 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/admin', require('./routes/admin'));
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Health check DB error:', error);
+    res.status(503).json({ status: 'error', message: 'Database unavailable', timestamp: new Date().toISOString() });
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {

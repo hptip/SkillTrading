@@ -157,7 +157,8 @@ export const MySkillsPage = () => {
       setModalOpen(false);
       await fetchSkills();
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save skill');
+      const apiError = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(apiError?.response?.data?.message || apiError?.message || 'Không thể lưu khóa học. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
