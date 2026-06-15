@@ -85,8 +85,8 @@ Khi `NODE_ENV=production`, Express sẽ serve frontend từ thư mục `dist` v�
    - New project
    - Chọn region gần bạn
    - Lấy connection string từ Settings -> Database -> Connection string -> URI
-   - Dùng dạng direct connection, ví dụ:
-     `postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require`
+   - Dùng dạng pooler / transaction string từ Supabase (khuyến nghị cho Prisma/Render), ví dụ:
+     `postgresql://postgres:YOUR_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require`
 3. Vào Render Dashboard, chọn **New +** -> **Web Service**.
 4. Chọn repository, cấu hình:
    - Build Command: `npm install && npm run render-build`
