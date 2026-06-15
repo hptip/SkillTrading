@@ -77,24 +77,28 @@ Khi `NODE_ENV=production`, Express sẽ serve frontend từ thư mục `dist` v�
 
 ## Deploy lên Render
 
-### Cách 1: Blueprint từ `render.yaml`
+### Cách 1: Blueprint từ `render.yaml` (khuyên dùng)
 
 1. Push source code lên GitHub.
 2. Vào Render Dashboard, chọn **New +** -> **Blueprint**.
 3. Chọn repository chứa dự án.
-4. Render sẽ tạo:
-   - Web Service `skill-trading`
-   - PostgreSQL database `skill-trading-db` free plan
-5. Confirm deploy. Render sẽ tự chạy:
+4. Render sẽ tự tạo:
+   - Web Service `skill-trading` (plan free)
+   - PostgreSQL `skill-trading-db` (plan free, region singapore)
+5. Render sẽ tự inject:
+   - `DATABASE_URL` từ PostgreSQL free plan
+   - `JWT_SECRET` tự sinh
+   - `NODE_ENV=production`
+6. Xác nhận deploy. Render sẽ chạy:
 
 ```bash
 npm install && npm run render-build
 npm start
 ```
 
-`DATABASE_URL` và `JWT_SECRET` đã được cấu hình trong `render.yaml`.
+`DATABASE_URL` và `JWT_SECRET` được cấu hình tự động trong `render.yaml`, nên bạn không cần thêm thủ công khi deploy bằng Blueprint. Nếu muốn chạy local, hãy dùng [server/.env.example](server/.env.example).
 
-### Cách 2: Tạo thủ công
+### Cách 2: Tạo thủ công (không dùng Blueprint)
 
 1. Tạo PostgreSQL:
    - **New +** -> **PostgreSQL**
