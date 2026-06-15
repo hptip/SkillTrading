@@ -19,6 +19,8 @@ const normalizeAvailabilitySlots = (value) => {
 
 const isValidTime = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
+const isPublishRequested = (value) => Boolean(value);
+
 // Get all approved skills (marketplace)
 router.get('/', async (req, res) => {
   try {
@@ -162,6 +164,8 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Khung giờ cố định không hợp lệ. Vui lòng chọn giờ bắt đầu và kết thúc đúng định dạng.' });
     }
 
+    const publishRequested = isPublishRequested(isPublished);
+
     const skill = await prisma.skill.create({
       data: {
         title,
@@ -172,9 +176,9 @@ router.post('/', authenticate, async (req, res) => {
         coverImage: coverImage || null,
         galleryImages: Array.isArray(galleryImages) ? galleryImages : [],
         availabilitySlots: normalizedSlots,
-        isPublished: Boolean(isPublished) && req.user.status === 'ACTIVE',
-        status: Boolean(isPublished) && req.user.status === 'ACTIVE' ? 'APPROVED' : 'PENDING',
-        rejectReason: null
+        isPublished: false,
+        status: 'PENDING',
+        rejectReason: publishRequested ? null : null
       },
       include: {
         teacher: { select: { id: true, fullName: true, avatar: true } }
@@ -234,8 +238,6 @@ router.put('/:id', authenticate, async (req, res) => {
       }
     }
 
-    const shouldPublish = Boolean(isPublished);
-
     const updated = await prisma.skill.update({
       where: { id: skillId },
       data: {
@@ -246,9 +248,9 @@ router.put('/:id', authenticate, async (req, res) => {
         coverImage: coverImage ?? undefined,
         galleryImages: galleryImages !== undefined ? (Array.isArray(galleryImages) ? galleryImages : []) : undefined,
         availabilitySlots: normalizedSlots ?? undefined,
-        isPublished: shouldPublish,
-        status: shouldPublish ? 'APPROVED' : 'PENDING',
-        rejectReason: shouldPublish ? null : 'Khóa học chưa được công khai',
+        isPublished: false,
+        status: 'PENDING',
+        rejectReason: null,
       }
     });
 

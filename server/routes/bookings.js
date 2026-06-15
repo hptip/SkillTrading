@@ -71,6 +71,25 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
+function parseVietnamDateTime(value) {
+  if (value instanceof Date) return new Date(value);
+
+  const raw = String(value ?? '').trim();
+  if (!raw) return new Date(NaN);
+
+  const normalized = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(normalized)) {
+    return new Date(`${normalized}+07:00`);
+  }
+
+  if (/Z$/.test(normalized) || /[+-]\d{2}:?\d{2}$/.test(normalized)) {
+    return new Date(normalized);
+  }
+
+  return new Date(`${normalized}+07:00`);
+}
+
 function getVietnamParts(date) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -90,15 +109,18 @@ function parseVietnamPart(parts, type) {
 }
 
 function isSlotMatch(scheduledAt, slot) {
-  const parts = getVietnamParts(new Date(scheduledAt));
+  const scheduledDate = parseVietnamDateTime(scheduledAt);
+  const parts = getVietnamParts(scheduledDate);
   const weekday = parseVietnamPart(parts, 'weekday');
   const dayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
   const dayNumber = dayMap[weekday] || 0;
   const hour = parseVietnamPart(parts, 'hour');
   const minute = parseVietnamPart(parts, 'minute');
   const currentTime = `${hour}:${minute}`;
+  const nextHour = `${String((Number.parseInt(hour, 10) + 1) % 24).padStart(2, '0')}`;
+  const endTime = `${nextHour}:${minute}`;
 
-  return Number(slot.day) === dayNumber && currentTime === slot.start && `${String(parseInt(hour) + 1).padStart(2, '0')}:${minute}` === slot.end;
+  return Number(slot.day) === dayNumber && currentTime === slot.start && endTime === slot.end;
 }
 
 // Create booking
@@ -107,7 +129,7 @@ router.post('/', authenticate, async (req, res) => {
     const { skillId, scheduledAt, durationHours = 1, message } = req.body;
     const parsedSkillId = parseInt(skillId);
     const duration = Number(durationHours);
-    const scheduledDate = new Date(scheduledAt);
+    const scheduledDate = parseVietnamDateTime(scheduledAt);
 
     if (!parsedSkillId || Number.isNaN(scheduledDate.getTime())) {
       return res.status(400).json({ message: 'Skill and schedule are required' });

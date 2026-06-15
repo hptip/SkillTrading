@@ -347,7 +347,7 @@ export const MySkillsPage = () => {
 
           <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
             <input type="checkbox" checked={form.isPublished} onChange={(e) => setForm((prev) => ({ ...prev, isPublished: e.target.checked }))} className="accent-violet-600" />
-            Công khai khóa học ngay sau khi lưu
+            Gửi khóa học để admin phê duyệt
           </label>
 
           {error && (

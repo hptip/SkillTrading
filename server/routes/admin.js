@@ -274,7 +274,7 @@ router.put('/skills/:id/approve', async (req, res) => {
   try {
     const skill = await prisma.skill.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'APPROVED', rejectReason: null }
+      data: { status: 'APPROVED', isPublished: true, rejectReason: null }
     });
     res.json(skill);
   } catch (error) {
@@ -289,7 +289,7 @@ router.put('/skills/:id/reject', async (req, res) => {
 
     const skill = await prisma.skill.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: 'REJECTED', rejectReason: reason }
+      data: { status: 'REJECTED', isPublished: false, rejectReason: reason }
     });
     res.json(skill);
   } catch (error) {
