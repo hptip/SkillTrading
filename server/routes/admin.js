@@ -161,20 +161,46 @@ router.put('/users/:id/status', async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (status === 'SUSPENDED' || status === 'BANNED') {
-      await prisma.skill.updateMany({
-        where: { teacherId: userId, status: 'APPROVED' },
-        data: {
-          isPublished: false,
-          status: 'PENDING',
-          rejectReason: status === 'SUSPENDED' ? 'Tài khoản đang bị đình chỉ. Các khóa học đã bị vô hiệu hóa.' : 'Tài khoản đã bị khóa.'
-        }
-      });
-    }
+    await prisma.$transaction(async (tx) => {
+      if (status === 'SUSPENDED' || status === 'BANNED') {
+        await tx.skill.updateMany({
+          where: { teacherId: userId, status: { in: ['APPROVED', 'PENDING'] } },
+          data: {
+            isPublished: false,
+            status: 'PENDING',
+            rejectReason: status === 'SUSPENDED'
+              ? 'Tài khoản đang bị đình chỉ. Các khóa học đã bị vô hiệu hóa.'
+              : 'Tài khoản đã bị khóa.'
+          }
+        });
+      }
 
-    const updatedUser = await prisma.user.update({
+      if (status === 'ACTIVE') {
+        await tx.skill.updateMany({
+          where: {
+            teacherId: userId,
+            OR: [
+              { rejectReason: { contains: 'Tài khoản đang bị đình chỉ' } },
+              { rejectReason: { contains: 'Tài khoản đã bị khóa' } },
+              { status: 'PENDING' }
+            ]
+          },
+          data: {
+            isPublished: true,
+            status: 'APPROVED',
+            rejectReason: null,
+          }
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { status },
+      });
+    });
+
+    const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      data: { status },
       select: { id: true, email: true, fullName: true, status: true }
     });
 

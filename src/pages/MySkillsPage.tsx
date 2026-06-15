@@ -118,11 +118,17 @@ export const MySkillsPage = () => {
 
   const handleSubmit = async () => {
     setError('');
-    if (!form.title || !form.description || !form.category || !form.price) {
+
+    const title = form.title.trim();
+    const description = form.description.trim();
+    const category = form.category.trim();
+    const price = Number(form.price);
+
+    if (!title || !description || !category || !Number.isFinite(price)) {
       setError('Vui lòng điền đầy đủ thông tin khóa học.');
       return;
     }
-    if (form.price < 30 || form.price > 300) {
+    if (price < 30 || price > 300) {
       setError('Giá mỗi giờ phải từ 30 đến 300 SKC.');
       return;
     }
@@ -130,10 +136,14 @@ export const MySkillsPage = () => {
       setError('Vui lòng chọn ít nhất 1 khung giờ cố định cho khóa học.');
       return;
     }
+
     setSubmitting(true);
     try {
       const payload = {
-        ...form,
+        title,
+        description,
+        category,
+        price,
         availabilitySlots: form.availabilitySlots,
         coverImage: form.coverImage || undefined,
         galleryImages: form.galleryImages,
@@ -145,7 +155,7 @@ export const MySkillsPage = () => {
         await skillsApi.create(payload);
       }
       setModalOpen(false);
-      fetchSkills();
+      await fetchSkills();
     } catch (err: unknown) {
       setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save skill');
     } finally {

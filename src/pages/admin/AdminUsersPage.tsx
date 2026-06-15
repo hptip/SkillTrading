@@ -29,6 +29,7 @@ export const AdminUsersPage = () => {
   const [skcAmount, setSkcAmount] = useState(0);
   const [skcReason, setSkcReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -64,11 +65,14 @@ export const AdminUsersPage = () => {
 
   const handleStatusChange = async () => {
     if (!statusModal) return;
+    setActionError('');
     setActionLoading(true);
     try {
       await adminApi.updateUserStatus(statusModal.user.id, statusModal.status);
       setStatusModal(null);
-      fetchUsers();
+      await fetchUsers();
+    } catch (err: unknown) {
+      setActionError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản.');
     } finally {
       setActionLoading(false);
     }
@@ -237,6 +241,7 @@ export const AdminUsersPage = () => {
         <p className="text-gray-600 mb-4">
           Change <strong>{statusModal?.user.fullName}</strong>'s status to <strong>{statusModal?.status}</strong>?
         </p>
+        {actionError && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</p>}
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => setStatusModal(null)} className="flex-1">Cancel</Button>
           <Button variant="danger" onClick={handleStatusChange} loading={actionLoading} className="flex-1">Confirm</Button>

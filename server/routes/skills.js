@@ -5,6 +5,22 @@ const { authenticate } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
+const normalizeAvailabilitySlots = (value) => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(Boolean)
+    .map((slot) => ({
+      day: String(slot.day ?? '').trim(),
+      start: String(slot.start ?? '').trim(),
+      end: String(slot.end ?? '').trim(),
+      label: String(slot.label ?? '').trim(),
+    }))
+    .filter((slot) => slot.day && slot.start && slot.end);
+};
+
+const isValidTime = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+
 // Get all approved skills (marketplace)
 router.get('/', async (req, res) => {
   try {
@@ -125,22 +141,35 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(403).json({ message: 'Tài khoản của bạn đang bị đình chỉ. Bạn không thể tạo hoặc công khai khóa học mới.' });
     }
 
-    if (!title || !description || !category || !price) {
+    if (!title || !description || !category || price === undefined || price === null || price === '') {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin khóa học.' });
     }
 
-    if (price < 30 || price > 300) {
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice)) {
+      return res.status(400).json({ message: 'Giá khóa học phải là số hợp lệ.' });
+    }
+
+    if (numericPrice < 30 || numericPrice > 300) {
       return res.status(400).json({ message: 'Giá mỗi giờ phải từ 30 đến 300 SKC.' });
     }
 
-    const normalizedSlots = Array.isArray(availabilitySlots) ? availabilitySlots : [];
+    const normalizedSlots = normalizeAvailabilitySlots(availabilitySlots);
+    if (normalizedSlots.length === 0) {
+      return res.status(400).json({ message: 'Vui lòng chọn ít nhất 1 khung giờ cố định cho khóa học.' });
+    }
+
+    const invalidSlot = normalizedSlots.find((slot) => !isValidTime(slot.start) || !isValidTime(slot.end) || slot.end <= slot.start);
+    if (invalidSlot) {
+      return res.status(400).json({ message: 'Khung giờ cố định không hợp lệ. Vui lòng chọn giờ bắt đầu và kết thúc đúng định dạng.' });
+    }
 
     const skill = await prisma.skill.create({
       data: {
         title,
         description,
         category,
-        price: parseFloat(price),
+        price: numericPrice,
         teacherId: req.user.id,
         coverImage: coverImage || null,
         galleryImages: Array.isArray(galleryImages) ? galleryImages : [],
@@ -185,8 +214,21 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Không thể chỉnh sửa khóa học khi đang có lịch học đang hoạt động.' });
     }
 
-    if (price && (price < 30 || price > 300)) {
+    const numericPrice = price !== undefined ? Number(price) : undefined;
+    if (numericPrice !== undefined && (!Number.isFinite(numericPrice) || numericPrice < 30 || numericPrice > 300)) {
       return res.status(400).json({ message: 'Giá mỗi giờ phải từ 30 đến 300 SKC.' });
+    }
+
+    const normalizedSlots = availabilitySlots !== undefined ? normalizeAvailabilitySlots(availabilitySlots) : undefined;
+    if (normalizedSlots && normalizedSlots.length === 0) {
+      return res.status(400).json({ message: 'Vui lòng chọn ít nhất 1 khung giờ cố định cho khóa học.' });
+    }
+
+    if (normalizedSlots) {
+      const invalidSlot = normalizedSlots.find((slot) => !isValidTime(slot.start) || !isValidTime(slot.end) || slot.end <= slot.start);
+      if (invalidSlot) {
+        return res.status(400).json({ message: 'Khung giờ cố định không hợp lệ. Vui lòng chọn giờ bắt đầu và kết thúc đúng định dạng.' });
+      }
     }
 
     const shouldPublish = Boolean(isPublished);
@@ -197,10 +239,10 @@ router.put('/:id', authenticate, async (req, res) => {
         title: title ?? undefined,
         description: description ?? undefined,
         category: category ?? undefined,
-        price: price ? parseFloat(price) : undefined,
+        price: numericPrice ?? undefined,
         coverImage: coverImage ?? undefined,
-        galleryImages: galleryImages ? (Array.isArray(galleryImages) ? galleryImages : []) : undefined,
-        availabilitySlots: availabilitySlots ? (Array.isArray(availabilitySlots) ? availabilitySlots : []) : undefined,
+        galleryImages: galleryImages !== undefined ? (Array.isArray(galleryImages) ? galleryImages : []) : undefined,
+        availabilitySlots: normalizedSlots ?? undefined,
         isPublished: shouldPublish,
         status: shouldPublish ? 'APPROVED' : 'PENDING',
         rejectReason: shouldPublish ? null : 'Khóa học chưa được công khai',
