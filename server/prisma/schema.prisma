@@ -3,44 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum UserRole {
-  USER
-  ADMIN
-}
-
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  BANNED
-}
-
-enum SkillStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  COMPLETED
-  CANCELLED
-  DISPUTED
-}
-
-enum TransactionType {
-  BONUS
-  HOLD
-  RELEASE
-  EARN
-  SPEND
-  REFUND
-  ADJUST
-  FEE
 }
 
 model User {
@@ -50,8 +14,8 @@ model User {
   fullName         String
   bio              String?
   avatar           String?
-  role             UserRole      @default(USER)
-  status           UserStatus    @default(ACTIVE)
+  role             String        @default("USER")
+  status           String        @default("ACTIVE")
   skc              Float         @default(0)
   avgRating        Float         @default(0)
   totalReviews     Int           @default(0)
@@ -71,12 +35,12 @@ model Skill {
   description      String
   category         String
   price            Float
-  status           SkillStatus @default(PENDING)
+  status           String      @default("PENDING")
   rejectReason     String?
   teacherId        Int
   coverImage       String?
-  galleryImages    Json?       @default("[]")
-  availabilitySlots Json?      @default("[]")
+  galleryImages    String?     @default("[]")
+  availabilitySlots String?    @default("[]")
   timezone         String      @default("Asia/Ho_Chi_Minh")
   isPublished      Boolean     @default(false)
   teacher          User        @relation(fields: [teacherId], references: [id])
@@ -96,7 +60,7 @@ model Booking {
   scheduledAt      DateTime
   durationHours    Float         @default(1)
   totalPrice       Float
-  status           BookingStatus @default(PENDING)
+  status           String        @default("PENDING")
   message          String?
   disputeReason    String?
   cancelReason     String?
@@ -132,7 +96,7 @@ model Review {
 model Transaction {
   id          Int             @id @default(autoincrement())
   userId      Int
-  type        TransactionType
+  type        String
   amount      Float
   balanceBefore Float
   balanceAfter  Float
