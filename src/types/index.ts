@@ -18,6 +18,13 @@ export interface User {
   createdAt?: string;
 }
 
+export interface AvailabilitySlot {
+  day: string;
+  start: string;
+  end: string;
+  label: string;
+}
+
 export interface Skill {
   id: number;
   title: string;
@@ -27,6 +34,11 @@ export interface Skill {
   status: SkillStatus;
   rejectReason?: string;
   teacherId: number;
+  coverImage?: string;
+  galleryImages?: string[];
+  availabilitySlots?: AvailabilitySlot[];
+  isPublished?: boolean;
+  timezone?: string;
   teacher?: Pick<User, 'id' | 'fullName' | 'avatar' | 'bio' | 'avgRating' | 'totalReviews' | 'createdAt'>;
   avgRating: number;
   totalReviews: number;
@@ -43,6 +55,9 @@ export interface Booking {
   skillId: number;
   scheduledAt: string;
   durationHours: number;
+  slotDay?: string;
+  slotStartTime?: string;
+  slotEndTime?: string;
   totalPrice: number;
   status: BookingStatus;
   message?: string;

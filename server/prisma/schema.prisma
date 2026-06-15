@@ -66,37 +66,46 @@ model User {
 }
 
 model Skill {
-  id          Int         @id @default(autoincrement())
-  title       String
-  description String
-  category    String
-  price       Float
-  status      SkillStatus @default(PENDING)
-  rejectReason String?
-  teacherId   Int
-  teacher     User        @relation(fields: [teacherId], references: [id])
-  bookings    Booking[]
-  reviews     Review[]
-  avgRating   Float       @default(0)
-  totalReviews Int        @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id               Int         @id @default(autoincrement())
+  title            String
+  description      String
+  category         String
+  price            Float
+  status           SkillStatus @default(PENDING)
+  rejectReason     String?
+  teacherId        Int
+  coverImage       String?
+  galleryImages    Json?       @default("[]")
+  availabilitySlots Json?      @default("[]")
+  timezone         String      @default("Asia/Ho_Chi_Minh")
+  isPublished      Boolean     @default(false)
+  teacher          User        @relation(fields: [teacherId], references: [id])
+  bookings         Booking[]
+  reviews          Review[]
+  avgRating        Float       @default(0)
+  totalReviews     Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 }
 
 model Booking {
-  id            Int           @id @default(autoincrement())
-  learnerId     Int
-  teacherId     Int
-  skillId       Int
-  scheduledAt   DateTime
-  durationHours Float         @default(1)
-  totalPrice    Float
-  status        BookingStatus @default(PENDING)
-  message       String?
-  disputeReason String?
-  cancelReason  String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               Int           @id @default(autoincrement())
+  learnerId        Int
+  teacherId        Int
+  skillId          Int
+  scheduledAt      DateTime
+  durationHours    Float         @default(1)
+  totalPrice       Float
+  status           BookingStatus @default(PENDING)
+  message          String?
+  disputeReason    String?
+  cancelReason     String?
+  slotDay          String?
+  slotStartTime    String?
+  slotEndTime      String?
+  timezone         String        @default("Asia/Ho_Chi_Minh")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   learner       User          @relation("LearnerBookings", fields: [learnerId], references: [id])
   teacher       User          @relation("TeacherBookings", fields: [teacherId], references: [id])

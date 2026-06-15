@@ -36,19 +36,19 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-violet-50 via-white to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-16 h-16 bg-linear-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <span className="text-white font-bold text-2xl">ST</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Create account</h1>
-          <p className="text-gray-500 mt-1">Join the skill exchange community</p>
+          <h1 className="text-3xl font-bold text-gray-900">Tạo tài khoản</h1>
+          <p className="text-gray-500 mt-1">Tham gia cộng đồng chia sẻ kỹ năng</p>
         </div>
 
         {/* Welcome bonus banner */}
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <Gift className="w-8 h-8 flex-shrink-0" />
+        <div className="bg-linear-to-r from-violet-600 to-indigo-600 text-white rounded-2xl p-4 mb-6 flex items-center gap-3">
+          <Gift className="w-8 h-8 shrink-0" />
           <div>
             <p className="font-semibold">Welcome Bonus!</p>
             <p className="text-sm text-violet-200">Get 100 SKC free when you register</p>

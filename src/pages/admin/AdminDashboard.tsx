@@ -119,14 +119,14 @@ export const AdminDashboard = () => {
       {/* Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <Clock className="w-8 h-8 text-amber-500 flex-shrink-0" />
+          <Clock className="w-8 h-8 text-amber-500 shrink-0" />
           <div>
             <p className="font-semibold text-amber-800">{data?.stats.pendingSkillsCount} Skills Pending</p>
             <p className="text-sm text-amber-600">Awaiting your review</p>
           </div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
-          <AlertTriangle className="w-8 h-8 text-red-500 flex-shrink-0" />
+          <AlertTriangle className="w-8 h-8 text-red-500 shrink-0" />
           <div>
             <p className="font-semibold text-red-800">{data?.stats.disputedBookingsCount} Active Disputes</p>
             <p className="text-sm text-red-600">Require resolution</p>
@@ -154,7 +154,7 @@ export const AdminDashboard = () => {
                       <p className="text-sm font-medium text-gray-900 truncate">{skill.title}</p>
                       <p className="text-xs text-gray-400">{skill.teacher.fullName} · {skill.category} · {skill.price} SKC</p>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 shrink-0">
                       <Button size="sm" variant="success" onClick={() => setApproveSkill(skill.id)} icon={<Check className="w-3.5 h-3.5" />} />
                       <Button size="sm" variant="danger" onClick={() => setRejectSkill({ id: skill.id, title: skill.title })} icon={<X className="w-3.5 h-3.5" />} />
                     </div>

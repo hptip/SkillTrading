@@ -73,6 +73,36 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
+function getVietnamParts(date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+}
+
+function parseVietnamPart(parts, type) {
+  const match = parts.find((part) => part.type === type);
+  return match ? match.value : '';
+}
+
+function isSlotMatch(scheduledAt, slot) {
+  const parts = getVietnamParts(new Date(scheduledAt));
+  const weekday = parseVietnamPart(parts, 'weekday');
+  const dayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+  const dayNumber = dayMap[weekday] || 0;
+  const hour = parseVietnamPart(parts, 'hour');
+  const minute = parseVietnamPart(parts, 'minute');
+  const currentTime = `${hour}:${minute}`;
+
+  return Number(slot.day) === dayNumber && currentTime === slot.start && `${String(parseInt(hour) + 1).padStart(2, '0')}:${minute}` === slot.end;
+}
+
 // Create booking
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -84,8 +114,8 @@ router.post('/', authenticate, async (req, res) => {
     if (!parsedSkillId || Number.isNaN(scheduledDate.getTime())) {
       return res.status(400).json({ message: 'Skill and schedule are required' });
     }
-    if (!Number.isFinite(duration) || duration < 0.5 || duration > 8) {
-      return res.status(400).json({ message: 'Duration must be between 0.5 and 8 hours' });
+    if (!Number.isFinite(duration) || duration !== 1) {
+      return res.status(400).json({ message: 'Khóa học này chỉ hỗ trợ đặt đúng 1 giờ theo khung cố định.' });
     }
     if (scheduledDate <= new Date()) {
       return res.status(400).json({ message: 'Scheduled time must be in the future' });
@@ -97,12 +127,19 @@ router.post('/', authenticate, async (req, res) => {
     });
 
     if (!skill) return res.status(404).json({ message: 'Skill not found' });
-    if (skill.status !== 'APPROVED') return res.status(400).json({ message: 'Skill is not available' });
+    if (!skill.isPublished || skill.status !== 'APPROVED') return res.status(400).json({ message: 'Khóa học này hiện không mở để đăng ký.' });
     if (skill.teacherId === req.user.id) {
       return res.status(400).json({ message: 'Cannot book your own skill' });
     }
     if (skill.teacher.status !== 'ACTIVE') {
       return res.status(400).json({ message: 'Teacher account is not active' });
+    }
+
+    const availabilitySlots = Array.isArray(skill.availabilitySlots) ? skill.availabilitySlots : [];
+    const slotMatch = availabilitySlots.find((slot) => isSlotMatch(scheduledDate, slot));
+
+    if (!slotMatch) {
+      return res.status(400).json({ message: 'Bạn chỉ được chọn khung giờ cố định do người dạy bật.' });
     }
 
     const totalPrice = roundSkc(skill.price * duration);
@@ -158,6 +195,10 @@ router.post('/', authenticate, async (req, res) => {
           durationHours: duration,
           totalPrice,
           message,
+          slotDay: slotMatch.day,
+          slotStartTime: slotMatch.start,
+          slotEndTime: slotMatch.end,
+          timezone: skill.timezone || 'Asia/Ho_Chi_Minh',
           status: 'PENDING',
         },
         include: {

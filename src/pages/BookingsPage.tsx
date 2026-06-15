@@ -313,7 +313,7 @@ const BookingCard = ({ booking, role, onConfirm, onReject, onComplete, onCancel,
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col gap-2 flex-shrink-0">
+          <div className="flex flex-col gap-2 shrink-0">
             {/* Teacher actions */}
             {role === 'teacher' && booking.status === 'PENDING' && (
               <>

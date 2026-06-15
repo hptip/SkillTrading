@@ -33,8 +33,12 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
-      return res.status(403).json({ message: `Your account is ${user.status.toLowerCase()}` });
+    if (user.status === 'BANNED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+    }
+
+    if (user.status === 'SUSPENDED') {
+      req.userStatusNotice = 'Tài khoản của bạn đang bị đình chỉ. Các khóa học hiện đã bị vô hiệu hóa.';
     }
 
     req.user = user;

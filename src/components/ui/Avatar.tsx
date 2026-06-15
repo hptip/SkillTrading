@@ -37,14 +37,14 @@ export const Avatar = ({ src, name, size = 'md', className }: AvatarProps) => {
       <img
         src={src}
         alt={name}
-        className={cn('rounded-full object-cover flex-shrink-0', sizeClasses[size], className)}
+        className={cn('rounded-full object-cover shrink-0', sizeClasses[size], className)}
       />
     );
   }
 
   return (
     <div className={cn(
-      'rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-white',
+      'rounded-full flex items-center justify-center shrink-0 font-semibold text-white',
       sizeClasses[size],
       getColor(name),
       className

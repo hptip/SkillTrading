@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
   try {
     const { category, minPrice, maxPrice, sortBy, search, page = 1, limit = 12 } = req.query;
 
-    const where = { status: 'APPROVED' };
+    const where = { status: 'APPROVED', isPublished: true };
 
     if (category) where.category = category;
     if (search) {
@@ -119,15 +119,21 @@ router.get('/:id', async (req, res) => {
 // Create skill
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, description, category, price } = req.body;
+    const { title, description, category, price, coverImage, galleryImages, availabilitySlots, isPublished = false } = req.body;
+
+    if (req.user.status === 'SUSPENDED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đang bị đình chỉ. Bạn không thể tạo hoặc công khai khóa học mới.' });
+    }
 
     if (!title || !description || !category || !price) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin khóa học.' });
     }
 
     if (price < 30 || price > 300) {
-      return res.status(400).json({ message: 'Price must be between 30 and 300 SKC' });
+      return res.status(400).json({ message: 'Giá mỗi giờ phải từ 30 đến 300 SKC.' });
     }
+
+    const normalizedSlots = Array.isArray(availabilitySlots) ? availabilitySlots : [];
 
     const skill = await prisma.skill.create({
       data: {
@@ -136,7 +142,11 @@ router.post('/', authenticate, async (req, res) => {
         category,
         price: parseFloat(price),
         teacherId: req.user.id,
-        status: 'APPROVED',
+        coverImage: coverImage || null,
+        galleryImages: Array.isArray(galleryImages) ? galleryImages : [],
+        availabilitySlots: normalizedSlots,
+        isPublished: Boolean(isPublished) && req.user.status === 'ACTIVE',
+        status: Boolean(isPublished) && req.user.status === 'ACTIVE' ? 'APPROVED' : 'PENDING',
         rejectReason: null
       },
       include: {
@@ -155,7 +165,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const skillId = parseInt(req.params.id);
-    const { title, description, category, price } = req.body;
+    const { title, description, category, price, coverImage, galleryImages, availabilitySlots, isPublished } = req.body;
 
     const skill = await prisma.skill.findUnique({
       where: { id: skillId },
@@ -168,23 +178,32 @@ router.put('/:id', authenticate, async (req, res) => {
 
     if (!skill) return res.status(404).json({ message: 'Skill not found' });
     if (skill.teacherId !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
+    if (req.user.status === 'SUSPENDED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đang bị đình chỉ, nên không thể chỉnh sửa khóa học đang hoạt động.' });
+    }
     if (skill.bookings.length > 0) {
-      return res.status(400).json({ message: 'Cannot edit skill with active bookings' });
+      return res.status(400).json({ message: 'Không thể chỉnh sửa khóa học khi đang có lịch học đang hoạt động.' });
     }
 
     if (price && (price < 30 || price > 300)) {
-      return res.status(400).json({ message: 'Price must be between 30 and 300 SKC' });
+      return res.status(400).json({ message: 'Giá mỗi giờ phải từ 30 đến 300 SKC.' });
     }
+
+    const shouldPublish = Boolean(isPublished);
 
     const updated = await prisma.skill.update({
       where: { id: skillId },
       data: {
-        title,
-        description,
-        category,
+        title: title ?? undefined,
+        description: description ?? undefined,
+        category: category ?? undefined,
         price: price ? parseFloat(price) : undefined,
-        status: 'APPROVED',
-        rejectReason: null,
+        coverImage: coverImage ?? undefined,
+        galleryImages: galleryImages ? (Array.isArray(galleryImages) ? galleryImages : []) : undefined,
+        availabilitySlots: availabilitySlots ? (Array.isArray(availabilitySlots) ? availabilitySlots : []) : undefined,
+        isPublished: shouldPublish,
+        status: shouldPublish ? 'APPROVED' : 'PENDING',
+        rejectReason: shouldPublish ? null : 'Khóa học chưa được công khai',
       }
     });
 

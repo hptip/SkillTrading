@@ -157,14 +157,30 @@ router.put('/users/:id/status', async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const user = await prisma.user.update({
-      where: { id: parseInt(req.params.id) },
+    const userId = parseInt(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (status === 'SUSPENDED' || status === 'BANNED') {
+      await prisma.skill.updateMany({
+        where: { teacherId: userId, status: 'APPROVED' },
+        data: {
+          isPublished: false,
+          status: 'PENDING',
+          rejectReason: status === 'SUSPENDED' ? 'Tài khoản đang bị đình chỉ. Các khóa học đã bị vô hiệu hóa.' : 'Tài khoản đã bị khóa.'
+        }
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
       data: { status },
       select: { id: true, email: true, fullName: true, status: true }
     });
 
-    res.json(user);
+    res.json(updatedUser);
   } catch (error) {
+    console.error('Update user status error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

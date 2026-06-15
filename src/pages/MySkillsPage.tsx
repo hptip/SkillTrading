@@ -1,16 +1,35 @@
 import { useState, useEffect } from 'react';
 import { skillsApi } from '../lib/api';
-import { Skill } from '../types';
+import { AvailabilitySlot, Skill } from '../types';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge, statusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input, Textarea, Select } from '../components/ui/Input';
-import { Plus, Edit, Trash2, Coins, BookOpen, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Coins, BookOpen, AlertCircle, Image as ImageIcon, Clock3 } from 'lucide-react';
 
 const CATEGORIES = ['Programming', 'Language', 'Music', 'Design', 'Math', 'Science', 'Sports', 'Cooking', 'Business', 'Art', 'Other'];
+const WEEK_DAYS = [
+  { value: '1', label: 'Thứ 2' },
+  { value: '2', label: 'Thứ 3' },
+  { value: '3', label: 'Thứ 4' },
+  { value: '4', label: 'Thứ 5' },
+  { value: '5', label: 'Thứ 6' },
+  { value: '6', label: 'Thứ 7' },
+  { value: '7', label: 'Chủ nhật' },
+];
+const SLOT_TIMES = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '19:00', '20:00'];
 
-const defaultForm = { title: '', description: '', category: 'Programming', price: 50 };
+const defaultForm = {
+  title: '',
+  description: '',
+  category: 'Programming',
+  price: 50,
+  coverImage: '',
+  galleryImages: [] as string[],
+  availabilitySlots: [] as AvailabilitySlot[],
+  isPublished: false,
+};
 
 export const MySkillsPage = () => {
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -36,34 +55,94 @@ export const MySkillsPage = () => {
 
   const openCreate = () => {
     setEditingSkill(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm });
     setError('');
     setModalOpen(true);
   };
 
   const openEdit = (skill: Skill) => {
     setEditingSkill(skill);
-    setForm({ title: skill.title, description: skill.description, category: skill.category, price: skill.price });
+    setForm({
+      title: skill.title,
+      description: skill.description,
+      category: skill.category,
+      price: skill.price,
+      coverImage: skill.coverImage || '',
+      galleryImages: skill.galleryImages || [],
+      availabilitySlots: skill.availabilitySlots || [],
+      isPublished: Boolean(skill.isPublished),
+    });
     setError('');
     setModalOpen(true);
+  };
+
+  const toggleSlot = (day: string, start: string) => {
+    const end = `${String(Number(start.split(':')[0]) + 1).padStart(2, '0')}:${start.split(':')[1]}`;
+    const label = `${WEEK_DAYS.find(w => w.value === day)?.label || 'Ngày'} — ${start}–${end}`;
+    const existing = form.availabilitySlots.find((slot) => slot.day === day && slot.start === start);
+
+    if (existing) {
+      setForm((prev) => ({
+        ...prev,
+        availabilitySlots: prev.availabilitySlots.filter((slot) => !(slot.day === day && slot.start === start)),
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      availabilitySlots: [...prev.availabilitySlots, { day, start, end, label }],
+    }));
+  };
+
+  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Không đọc được ảnh'));
+    reader.readAsDataURL(file);
+  });
+
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    setForm((prev) => ({ ...prev, coverImage: dataUrl }));
+  };
+
+  const handleGalleryUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    const urls = await Promise.all(files.map((file) => readFileAsDataUrl(file)));
+    setForm((prev) => ({ ...prev, galleryImages: [...prev.galleryImages, ...urls] }));
   };
 
   const handleSubmit = async () => {
     setError('');
     if (!form.title || !form.description || !form.category || !form.price) {
-      setError('All fields are required');
+      setError('Vui lòng điền đầy đủ thông tin khóa học.');
       return;
     }
     if (form.price < 30 || form.price > 300) {
-      setError('Price must be between 30 and 300 SKC');
+      setError('Giá mỗi giờ phải từ 30 đến 300 SKC.');
+      return;
+    }
+    if (form.availabilitySlots.length === 0) {
+      setError('Vui lòng chọn ít nhất 1 khung giờ cố định cho khóa học.');
       return;
     }
     setSubmitting(true);
     try {
+      const payload = {
+        ...form,
+        availabilitySlots: form.availabilitySlots,
+        coverImage: form.coverImage || undefined,
+        galleryImages: form.galleryImages,
+        isPublished: form.isPublished,
+      };
       if (editingSkill) {
-        await skillsApi.update(editingSkill.id, form);
+        await skillsApi.update(editingSkill.id, payload);
       } else {
-        await skillsApi.create(form);
+        await skillsApi.create(payload);
       }
       setModalOpen(false);
       fetchSkills();
@@ -88,8 +167,8 @@ export const MySkillsPage = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Skills</h1>
-          <p className="text-gray-500 mt-1">Manage skills you teach</p>
+          <h1 className="text-3xl font-bold text-gray-900">Khóa học của tôi</h1>
+          <p className="text-gray-500 mt-1">Quản lý khóa học, ảnh giới thiệu và lịch học cố định</p>
         </div>
         <Button onClick={openCreate} icon={<Plus className="w-4 h-4" />}>
           Add Skill
@@ -98,10 +177,9 @@ export const MySkillsPage = () => {
 
       {/* Info banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-700">
-          <strong>Skill Approval:</strong> New skills require admin approval before appearing in the marketplace.
-          Rejected skills can be edited and resubmitted.
+          <strong>Phê duyệt khóa học:</strong> Khóa học mới cần admin duyệt trước khi hiển thị công khai. Bạn có thể sửa và gửi lại nếu bị từ chối.
         </div>
       </div>
 
@@ -173,25 +251,25 @@ export const MySkillsPage = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingSkill ? 'Edit Skill' : 'Create New Skill'}
+        title={editingSkill ? 'Chỉnh sửa khóa học' : 'Tạo khóa học mới'}
         size="lg"
       >
         <div className="space-y-4">
           <Input
-            label="Skill Title"
-            placeholder="e.g. React.js for Beginners"
+            label="Tên khóa học"
+            placeholder="Ví dụ: React.js cho người mới"
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
           />
           <Textarea
-            label="Description"
-            placeholder="Describe what learners will get from this session..."
+            label="Mô tả khóa học"
+            placeholder="Mô tả nội dung, lợi ích và mục tiêu học tập..."
             value={form.description}
             onChange={e => setForm({ ...form, description: e.target.value })}
             rows={4}
           />
           <Select
-            label="Category"
+            label="Danh mục"
             value={form.category}
             onChange={e => setForm({ ...form, category: e.target.value })}
           >
@@ -199,7 +277,7 @@ export const MySkillsPage = () => {
           </Select>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
-              Price per hour (SKC)
+              Giá mỗi giờ (SKC)
             </label>
             <input
               type="number"
@@ -209,8 +287,47 @@ export const MySkillsPage = () => {
               onChange={e => setForm({ ...form, price: parseInt(e.target.value) })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
-            <p className="text-xs text-gray-400 mt-1">Range: 30 – 300 SKC</p>
+            <p className="text-xs text-gray-400 mt-1">Phạm vi: 30 – 300 SKC</p>
           </div>
+
+          <div className="rounded-xl border border-violet-100 bg-violet-50 p-4">
+            <div className="flex items-center gap-2 text-sm text-violet-700 mb-2"><Clock3 className="w-4 h-4" /> Khung giờ cố định theo tuần</div>
+            <p className="text-xs text-violet-600 mb-3">Chọn các mốc 1 giờ cố định, hệ thống sẽ tự tạo lịch học cho từng tuần theo múi giờ Việt Nam.</p>
+            <div className="space-y-3">{WEEK_DAYS.map(day => (
+              <div key={day.value} className="rounded-xl border border-violet-100 bg-white p-3">
+                <div className="text-sm font-semibold text-gray-800 mb-2">{day.label}</div>
+                <div className="flex flex-wrap gap-2">{SLOT_TIMES.map(time => {
+                  const end = `${String(Number(time.split(':')[0]) + 1).padStart(2, '0')}:${time.split(':')[1]}`;
+                  const checked = form.availabilitySlots.some((slot) => slot.day === day.value && slot.start === time);
+                  return (
+                    <label key={`${day.value}-${time}`} className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs cursor-pointer ${checked ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-700 border-gray-200 hover:border-violet-200'}`}>
+                      <input type="checkbox" className="mr-2 accent-violet-600" checked={checked} onChange={() => toggleSlot(day.value, time)} />
+                      {time}–{end}
+                    </label>
+                  );
+                })}</div>
+              </div>
+            ))}</div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><ImageIcon className="w-4 h-4" /> Ảnh giới thiệu khóa học</div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Ảnh bìa</label>
+              <input type="file" accept="image/*" onChange={handleCoverUpload} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-violet-700" />
+              {form.coverImage && <img src={form.coverImage} alt="Cover preview" className="mt-3 h-28 w-full rounded-xl object-cover border border-gray-200" />}
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Thư viện ảnh minh họa</label>
+              <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="block w-full text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-violet-700" />
+              {form.galleryImages.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3">{form.galleryImages.map((img, index) => <div key={index} className="relative"><img src={img} alt="Gallery preview" className="h-20 w-full rounded-xl object-cover border border-gray-200" /><button type="button" onClick={() => setForm((prev) => ({ ...prev, galleryImages: prev.galleryImages.filter((_, i) => i !== index) }))} className="absolute top-1 right-1 rounded-full bg-red-500/90 text-white px-2 py-1 text-[10px]">Xóa</button></div>)}</div>}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+            <input type="checkbox" checked={form.isPublished} onChange={(e) => setForm((prev) => ({ ...prev, isPublished: e.target.checked }))} className="accent-violet-600" />
+            Công khai khóa học ngay sau khi lưu
+          </label>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -223,7 +340,7 @@ export const MySkillsPage = () => {
               Cancel
             </Button>
             <Button onClick={handleSubmit} loading={submitting} className="flex-1">
-              {editingSkill ? 'Update Skill' : 'Submit for Review'}
+              {editingSkill ? 'Cập nhật khóa học' : 'Gửi phê duyệt'}
             </Button>
           </div>
         </div>
@@ -233,7 +350,7 @@ export const MySkillsPage = () => {
       <Modal
         isOpen={!!deleteModal}
         onClose={() => setDeleteModal(null)}
-        title="Delete Skill"
+        title="Xóa khóa học"
         size="sm"
       >
         <div className="space-y-4">

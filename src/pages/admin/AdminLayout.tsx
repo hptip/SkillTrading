@@ -21,9 +21,9 @@ export const AdminLayout = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-6">
           {/* Sidebar */}
-          <div className="w-56 flex-shrink-0">
+          <div className="w-56 shrink-0">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600">
+              <div className="px-4 py-3 bg-linear-to-r from-violet-600 to-indigo-600">
                 <p className="text-white font-semibold text-sm">Admin Panel</p>
               </div>
               <nav className="p-2">

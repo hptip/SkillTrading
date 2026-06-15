@@ -8,8 +8,9 @@ import { Modal } from '../components/ui/Modal';
 import { Badge, statusBadge } from '../components/ui/Badge';
 import { StarRating } from '../components/ui/StarRating';
 import { Avatar } from '../components/ui/Avatar';
-import { Coins, Calendar, Clock, User, Star, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Coins, Calendar, Clock, User, Star, ArrowLeft, MessageSquare, Images, CalendarRange } from 'lucide-react';
 import { format } from 'date-fns';
+import { getNextWeeklySlotDate } from '../lib/slotUtils';
 
 export const SkillDetailPage = () => {
   const { id } = useParams();
@@ -20,10 +21,10 @@ export const SkillDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [bookingModal, setBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState({
-    scheduledAt: '',
     durationHours: 1,
     message: ''
   });
+  const [selectedSlot, setSelectedSlot] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -33,6 +34,9 @@ export const SkillDetailPage = () => {
       try {
         const res = await skillsApi.getById(parseInt(id!));
         setSkill(res.data);
+        if (res.data?.availabilitySlots?.length) {
+          setSelectedSlot(`${res.data.availabilitySlots[0].day}|${res.data.availabilitySlots[0].start}`);
+        }
       } catch {
         navigate('/marketplace');
       } finally {
@@ -40,26 +44,29 @@ export const SkillDetailPage = () => {
       }
     };
     fetch();
-  }, [id]);
+  }, [id, navigate]);
 
   const totalCost = skill ? skill.price * bookingForm.durationHours : 0;
+  const selectedSlotData = skill?.availabilitySlots?.find((slot) => `${slot.day}|${slot.start}` === selectedSlot) || null;
+  const scheduledPreview = selectedSlotData ? getNextWeeklySlotDate(selectedSlotData.day, selectedSlotData.start) : '';
 
   const handleBook = async () => {
     setBookingError('');
-    if (!bookingForm.scheduledAt) {
-      setBookingError('Please select a date and time');
+    if (!selectedSlotData) {
+      setBookingError('Vui lòng chọn một khung giờ cố định để đặt lịch.');
       return;
     }
-    if (new Date(bookingForm.scheduledAt) <= new Date()) {
-      setBookingError('Scheduled time must be in the future');
+    const scheduledAt = getNextWeeklySlotDate(selectedSlotData.day, selectedSlotData.start);
+    if (!scheduledAt || new Date(scheduledAt) <= new Date()) {
+      setBookingError('Khung giờ này đã hết hạn, vui lòng chọn khung khác.');
       return;
     }
     setBookingLoading(true);
     try {
       await bookingsApi.create({
         skillId: skill!.id,
-        scheduledAt: bookingForm.scheduledAt,
-        durationHours: bookingForm.durationHours,
+        scheduledAt,
+        durationHours: 1,
         message: bookingForm.message
       });
       setBookingSuccess(true);
@@ -120,6 +127,25 @@ export const SkillDetailPage = () => {
             </div>
 
             <p className="text-gray-700 leading-relaxed">{skill.description}</p>
+
+            {skill.coverImage && (
+              <div className="mt-6 rounded-2xl border border-gray-100 overflow-hidden bg-gray-50">
+                <img src={skill.coverImage} alt={skill.title} className="h-72 w-full object-cover" />
+              </div>
+            )}
+
+            {skill.galleryImages && skill.galleryImages.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
+                  <Images className="w-4 h-4 text-violet-500" /> Ảnh minh họa
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {skill.galleryImages.map((image, index) => (
+                    <img key={`${image}-${index}`} src={image} alt={`${skill.title} gallery ${index + 1}`} className="h-28 w-full rounded-xl object-cover border border-gray-100" />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Teacher info */}
@@ -243,25 +269,28 @@ export const SkillDetailPage = () => {
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Date & Time</label>
-              <input
-                type="datetime-local"
-                value={bookingForm.scheduledAt}
-                onChange={e => setBookingForm({ ...bookingForm, scheduledAt: e.target.value })}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+              <label className="text-sm font-medium text-gray-700 block mb-1">Khung giờ cố định</label>
+              <div className="grid gap-2">
+                {skill?.availabilitySlots?.map((slot) => {
+                  const value = `${slot.day}|${slot.start}`;
+                  const isSelected = selectedSlot === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setSelectedSlot(value)}
+                      className={`rounded-xl border px-3 py-3 text-left transition ${isSelected ? 'border-violet-500 bg-violet-50' : 'border-gray-200 bg-white hover:border-violet-200'}`}
+                    >
+                      <div className="text-sm font-semibold text-gray-900">{['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][Number(slot.day) % 7]} · {slot.start}–{slot.end}</div>
+                      <div className="text-xs text-gray-500">Lịch học đầu tiên: {getNextWeeklySlotDate(slot.day, slot.start)}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Duration (hours)</label>
-              <select
-                value={bookingForm.durationHours}
-                onChange={e => setBookingForm({ ...bookingForm, durationHours: parseInt(e.target.value) })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                {[1, 1.5, 2, 2.5, 3].map(h => <option key={h} value={h}>{h} hour{h > 1 ? 's' : ''}</option>)}
-              </select>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Hệ thống sẽ tự tạo lịch học đúng 1 giờ theo khung cố định bạn chọn, theo múi giờ Việt Nam.
             </div>
 
             <div>
@@ -273,6 +302,17 @@ export const SkillDetailPage = () => {
                 placeholder="Introduce yourself and your learning goals..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
               />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600">Khung đã chọn:</span>
+                <span className="font-semibold text-amber-700">{selectedSlotData ? `${['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][Number(selectedSlotData.day) % 7]} ${selectedSlotData.start}–${selectedSlotData.end}` : 'Chưa chọn'}</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Lịch học đầu tiên:</span>
+                <span>{scheduledPreview ? format(new Date(scheduledPreview), 'dd/MM/yyyy HH:mm') : '—'}</span>
+              </div>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">

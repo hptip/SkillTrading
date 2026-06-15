@@ -213,7 +213,7 @@ export const ProfilePage = () => {
                         <p className="text-xs text-gray-700 truncate">{tx.description}</p>
                         <p className="text-xs text-gray-400">{format(new Date(tx.createdAt), 'dd MMM, HH:mm')}</p>
                       </div>
-                      <span className={`text-sm font-bold flex-shrink-0 ${tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <span className={`text-sm font-bold shrink-0 ${tx.amount > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                         {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(0)}
                       </span>
                     </div>

@@ -8,12 +8,12 @@ export const HomePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-linear-to-br from-violet-50 via-white to-indigo-50">
       {/* Navbar */}
       <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-linear-to-br from-violet-600 to-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">ST</span>
             </div>
             <span className="font-bold text-gray-900 text-lg">SkillTrading</span>
@@ -40,7 +40,7 @@ export const HomePage = () => {
 
         <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
           Trade Skills,
-          <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"> Not Money</span>
+          <span className="bg-linear-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"> Not Money</span>
         </h1>
 
         <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
@@ -105,7 +105,7 @@ export const HomePage = () => {
             { step: '04', icon: <Star className="w-6 h-6" />, title: 'Complete & Earn', desc: 'Finish session, get paid 95% in SKC' },
           ].map(s => (
             <div key={s.step} className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-white">
+              <div className="w-12 h-12 bg-linear-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-white">
                 {s.icon}
               </div>
               <div className="text-xs font-bold text-violet-500 mb-1">STEP {s.step}</div>
@@ -118,7 +118,7 @@ export const HomePage = () => {
 
       {/* SKC Rules */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-3xl p-8 text-white">
+        <div className="bg-linear-to-br from-violet-600 to-indigo-700 rounded-3xl p-8 text-white">
           <div className="flex items-center gap-3 mb-6">
             <Shield className="w-8 h-8" />
             <h2 className="text-2xl font-bold">Platform Rules</h2>

@@ -51,9 +51,9 @@ export const skillsApi = {
   getCategories: () => api.get('/skills/categories'),
   getMy: () => api.get('/skills/my'),
   getById: (id: number) => api.get(`/skills/${id}`),
-  create: (data: { title: string; description: string; category: string; price: number }) =>
+  create: (data: { title: string; description: string; category: string; price: number; coverImage?: string; galleryImages?: string[]; availabilitySlots?: Array<{ day: string; start: string; end: string; label: string }>; isPublished?: boolean }) =>
     api.post('/skills', data),
-  update: (id: number, data: Partial<{ title: string; description: string; category: string; price: number }>) =>
+  update: (id: number, data: Partial<{ title: string; description: string; category: string; price: number; coverImage?: string; galleryImages?: string[]; availabilitySlots?: Array<{ day: string; start: string; end: string; label: string }>; isPublished?: boolean }>) =>
     api.put(`/skills/${id}`, data),
   delete: (id: number) => api.delete(`/skills/${id}`),
 };

@@ -76,8 +76,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
-      return res.status(403).json({ message: `Your account is ${user.status.toLowerCase()}. Please contact support.` });
+    if (user.status === 'BANNED') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+    }
+
+    if (user.status === 'SUSPENDED') {
+      // Suspended users can still log in, browse, and book lessons, but cannot publish or manage active skills.
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);

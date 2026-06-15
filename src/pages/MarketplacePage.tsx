@@ -60,8 +60,8 @@ export const MarketplacePage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
-        <p className="text-gray-500 mt-1">Discover skills to learn from fellow students</p>
+        <h1 className="text-3xl font-bold text-gray-900">Marketplace khóa học</h1>
+        <p className="text-gray-500 mt-1">Khám phá khóa học và lịch học cố định theo tuần</p>
       </div>
 
       {/* Search & Filters */}
