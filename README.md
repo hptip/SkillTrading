@@ -8,7 +8,7 @@ Nền tảng trao đổi kỹ năng P2P cho sinh viên, dùng Skill Coin (SKC) �
 - Backend: Node.js, Express, Prisma ORM
 - Database: PostgreSQL
 - Auth: JWT + bcrypt
-- Deploy: Render Web Service + Render PostgreSQL free plan
+- Deploy: Render Web Service + Supabase Free PostgreSQL
 
 ## Chức năng chính
 
@@ -20,7 +20,7 @@ Nền tảng trao đổi kỹ năng P2P cho sinh viên, dùng Skill Coin (SKC) �
 
 ## Chạy local
 
-Yêu cầu: Node.js 20+, PostgreSQL.
+Yêu cầu: Node.js 20+, Supabase Free PostgreSQL (hoặc local PostgreSQL).
 
 1. Cài dependencies:
 
@@ -39,7 +39,7 @@ copy server\.env.example server\.env
 3. Sửa `server/.env`:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/skilltrading?schema=public"
+DATABASE_URL="postgresql://postgres:YOUR_SUPABASE_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require"
 JWT_SECRET="your-local-secret"
 NODE_ENV="development"
 FRONTEND_URL="http://localhost:5173"
@@ -77,19 +77,27 @@ Khi `NODE_ENV=production`, Express sẽ serve frontend từ thư mục `dist` v�
 
 ## Deploy lên Render
 
-### Cách 1: Blueprint từ `render.yaml` (khuyên dùng)
+### Cách 1: Deploy lên Render với Supabase Free (khuyên dùng)
 
 1. Push source code lên GitHub.
-2. Vào Render Dashboard, chọn **New +** -> **Blueprint**.
-3. Chọn repository chứa dự án.
-4. Render sẽ tự tạo:
-   - Web Service `skill-trading` (plan free)
-   - PostgreSQL `skill-trading-db` (plan free, region singapore)
-5. Render sẽ tự inject:
-   - `DATABASE_URL` từ PostgreSQL free plan
-   - `JWT_SECRET` tự sinh
+2. Tạo project Supabase Free:
+   - Vào https://supabase.com
+   - New project
+   - Chọn region gần bạn
+   - Lấy connection string từ Settings -> Database -> Connection string -> URI
+   - Dùng dạng direct connection, ví dụ:
+     `postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres?sslmode=require`
+3. Vào Render Dashboard, chọn **New +** -> **Web Service**.
+4. Chọn repository, cấu hình:
+   - Build Command: `npm install && npm run render-build`
+   - Start Command: `npm start`
+   - Plan: Free
+5. Trong Environment Variables của Render, thêm:
+   - `DATABASE_URL=<connection string Supabase>`
+   - `JWT_SECRET=<chuỗi ngẫu nhiên dài>
    - `NODE_ENV=production`
-6. Xác nhận deploy. Render sẽ chạy:
+   - `FRONTEND_URL=<URL Render service của bạn>` (tùy chọn)
+6. Deploy. Render sẽ chạy build và start như config hiện tại.
 
 ```bash
 npm install && npm run render-build
@@ -100,29 +108,18 @@ npm start
 
 ### Cách 2: Tạo thủ công (không dùng Blueprint)
 
-1. Tạo PostgreSQL:
-   - **New +** -> **PostgreSQL**
-   - Plan: Free
-   - Region: Singapore hoặc region gần người dùng
-2. Tạo Web Service:
+1. Tạo Supabase Free Database (nếu chưa có):
+   - Vào Supabase, New project
+   - Copy connection string từ Settings -> Database
+2. Tạo Web Service trên Render:
    - Runtime: Node
-   - Build Command:
-
-```bash
-npm install && npm run render-build
-```
-
-   - Start Command:
-
-```bash
-npm start
-```
-
+   - Build Command: `npm install && npm run render-build`
+   - Start Command: `npm start`
 3. Thêm Environment Variables:
 
 ```env
 NODE_ENV=production
-DATABASE_URL=<Internal Database URL cua Render PostgreSQL>
+DATABASE_URL=<Direct Supabase connection string>
 JWT_SECRET=<chuoi bi mat dai>
 ```
 
