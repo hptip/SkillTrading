@@ -5,7 +5,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "build": "prisma generate --schema prisma/schema.prisma",
-    "migrate": "prisma db push --schema prisma/schema.prisma",
+    "migrate": "node scripts/wait-for-db.js",
     "seed": "node seed.js"
   },
   "prisma": {

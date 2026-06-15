@@ -9,6 +9,23 @@ const { PrismaClient } = require('@prisma/client');
 const app = express();
 const prisma = new PrismaClient();
 
+async function connectWithRetry(maxAttempts = 10, delayMs = 3000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await prisma.$connect();
+      console.log('Database connected');
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) {
+        throw error;
+      }
+
+      console.warn(`Database connection attempt ${attempt} failed. Retrying in ${delayMs / 1000}s...`, error.message);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function ensureDefaultAdmin() {
   const adminEmail = 'admin@skilltrading.com';
   const adminPassword = await bcrypt.hash('admin123', 10);
@@ -80,8 +97,7 @@ const PORT = process.env.PORT || 5000;
 
 async function main() {
   try {
-    await prisma.$connect();
-    console.log('Database connected');
+    await connectWithRetry();
 
     await ensureDefaultAdmin();
 
