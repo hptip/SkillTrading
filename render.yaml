@@ -3,23 +3,28 @@ services:
     name: skill-trading
     env: node
     region: singapore
-    plan: starter
+    plan: free
     autoDeploy: true
     healthCheckPath: /api/health
     buildCommand: npm install && npm run render-build
     startCommand: npm start
-    disk:
-      name: skill-trading-sqlite
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        value: file:/data/dev.db
+        fromDatabase:
+          name: skill-trading-db
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
         value: ""
+
+  - type: pserv
+    name: skill-trading-db
+    plan: free
+    region: singapore
+    databaseName: skilltrading
+    user: skilltrading
