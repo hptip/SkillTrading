@@ -76,7 +76,7 @@ export const bookingsApi = {
   getById: (id: number) => api.get(`/bookings/${id}`),
   create: (data: { skillId: number; scheduledAt: string; durationHours?: number; message?: string }) =>
     api.post('/bookings', data),
-  confirm: (id: number) => api.put(`/bookings/${id}/confirm`),
+  confirm: (id: number) => api.post(`/bookings/${id}/confirm`),
   reject: (id: number, reason?: string) => api.put(`/bookings/${id}/reject`, { reason }),
   complete: (id: number) => api.put(`/bookings/${id}/complete`),
   cancel: (id: number, reason?: string) => api.put(`/bookings/${id}/cancel`, { reason }),
@@ -117,4 +117,18 @@ export const adminApi = {
     api.get('/admin/bookings', { params }),
   resolveDispute: (id: number, resolution: string) =>
     api.put(`/admin/bookings/${id}/resolve-dispute`, { resolution }),
+};
+
+// Deposits
+export const depositsApi = {
+  getQrConfig: () => api.get('/deposits/qr-config'),
+  getTiers: () => api.get('/deposits/tiers'),
+  submit: (data: { tierId?: number; amount?: number; username: string; email: string; transferProofImage?: string }) => api.post('/deposits/submit', data),
+  getMy: () => api.get('/deposits/my'),
+  // Admin
+  list: () => api.get('/deposits'),
+  approve: (id: number) => api.put(`/deposits/${id}/approve`),
+  reject: (id: number, reason: string) => api.put(`/deposits/${id}/reject`, { reason }),
+  createTier: (data: { amount: number; skc: number }) => api.post('/deposits/tiers', data),
+  createQrConfig: (data: { qrImageUrl: string; bankName: string; bankAccount?: string; accountHolder?: string; description?: string; isActive?: boolean }) => api.post('/deposits/qr-config', data),
 };

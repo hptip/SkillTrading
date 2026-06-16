@@ -250,6 +250,41 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+// Confirm booking completion (teacher or learner)
+router.post('/:id/confirm', authenticate, async (req, res) => {
+  try {
+    const bookingId = parseInt(req.params.id);
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    if (req.user.id !== booking.teacherId && req.user.id !== booking.learnerId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const now = new Date();
+    const updates = {};
+    if (req.user.id === booking.teacherId) updates.teacherConfirmedAt = now;
+    if (req.user.id === booking.learnerId) updates.learnerConfirmedAt = now;
+
+    const updated = await prisma.booking.update({ where: { id: bookingId }, data: updates });
+
+    // If both parties confirmed and booking not already completed, finalize and credit teacher
+    const finalBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (finalBooking.teacherConfirmedAt && finalBooking.learnerConfirmedAt && finalBooking.status !== 'COMPLETED') {
+      await prisma.$transaction(async (tx) => {
+        await tx.booking.update({ where: { id: bookingId }, data: { status: 'COMPLETED' } });
+        const teacherAmount = Number(finalBooking.totalPrice) * 0.95; // teacher receives 95%
+        await createTransaction(tx, finalBooking.teacherId, 'REVENUE', teacherAmount, `Revenue for booking ${finalBooking.id}`, finalBooking.id);
+      });
+    }
+
+    res.json({ message: 'Confirmation recorded' });
+  } catch (error) {
+    console.error('Confirm booking error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Confirm booking (Teacher)
 router.put('/:id/confirm', authenticate, async (req, res) => {
   try {

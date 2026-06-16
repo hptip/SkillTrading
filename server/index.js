@@ -75,6 +75,7 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/deposits', require('./routes/deposits'));
 
 app.get('/api/health', async (req, res) => {
   try {
@@ -102,6 +103,15 @@ async function main() {
     await connectWithRetry();
 
     await ensureDefaultAdmin();
+
+    // start background jobs
+    try {
+      const { startEscalationJob } = require('./jobs/escalation');
+      startEscalationJob();
+      console.log('Escalation job started');
+    } catch (err) {
+      console.warn('Failed to start escalation job:', err.message);
+    }
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);

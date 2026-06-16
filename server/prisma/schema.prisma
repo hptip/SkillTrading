@@ -27,6 +27,7 @@ model User {
   bookingsAsTeacher Booking[]    @relation("TeacherBookings")
   transactions     Transaction[]
   reviews          Review[]
+  deposits         Deposit[]
 }
 
 model Skill {
@@ -53,23 +54,25 @@ model Skill {
 }
 
 model Booking {
-  id               Int           @id @default(autoincrement())
-  learnerId        Int
-  teacherId        Int
-  skillId          Int
-  scheduledAt      DateTime
-  durationHours    Float         @default(1)
-  totalPrice       Float
-  status           String        @default("PENDING")
-  message          String?
-  disputeReason    String?
-  cancelReason     String?
-  slotDay          String?
-  slotStartTime    String?
-  slotEndTime      String?
-  timezone         String        @default("Asia/Ho_Chi_Minh")
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                         Int           @id @default(autoincrement())
+  learnerId                  Int
+  teacherId                  Int
+  skillId                    Int
+  scheduledAt                DateTime
+  durationHours             Float         @default(1)
+  totalPrice                Float
+  status                    String        @default("PENDING")
+  message                   String?
+  disputeReason             String?
+  cancelReason              String?
+  slotDay                   String?
+  slotStartTime             String?
+  slotEndTime               String?
+  timezone                  String        @default("Asia/Ho_Chi_Minh")
+  teacherConfirmedAt        DateTime?
+  learnerConfirmedAt        DateTime?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
 
   learner       User          @relation("LearnerBookings", fields: [learnerId], references: [id])
   teacher       User          @relation("TeacherBookings", fields: [teacherId], references: [id])
@@ -107,3 +110,43 @@ model Transaction {
   user        User            @relation(fields: [userId], references: [id])
   booking     Booking?        @relation(fields: [bookingId], references: [id])
 }
+
+model PaymentTier {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  skc       Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([amount])
+}
+
+model DepositQRConfig {
+  id              Int      @id @default(autoincrement())
+  qrImageUrl      String
+  bankName        String
+  bankAccount     String
+  accountHolder   String
+  description     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Deposit {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  amount          Float
+  skc             Float
+  status          String   @default("PENDING")
+  username        String
+  email           String
+  transferProofImage String?
+  adminNotes      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+

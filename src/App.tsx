@@ -14,6 +14,8 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminSkillsPage } from './pages/admin/AdminSkillsPage';
 import { AdminBookingsPage } from './pages/admin/AdminBookingsPage';
+import { AdminDepositsPage } from './pages/admin/AdminDepositsPage';
+import { DepositPage } from './pages/DepositPage';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) => {
   const { user, loading } = useAuth();
@@ -68,6 +70,7 @@ function AppRoutes() {
         <Route path="/skills/:id" element={<SkillDetailPage />} />
         <Route path="/my-skills" element={<MySkillsPage />} />
         <Route path="/bookings" element={<BookingsPage />} />
+        <Route path="/deposit" element={<DepositPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/transactions" element={<ProfilePage />} />
       </Route>
@@ -78,6 +81,7 @@ function AppRoutes() {
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/skills" element={<AdminSkillsPage />} />
         <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+        <Route path="/admin/deposits" element={<AdminDepositsPage />} />
       </Route>
 
       {/* Fallback */}
