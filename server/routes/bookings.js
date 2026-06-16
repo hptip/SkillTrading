@@ -302,9 +302,10 @@ router.put('/:id/confirm', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Booking is not in PENDING status' });
     }
 
+    const now = new Date();
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CONFIRMED' },
+      data: { status: 'CONFIRMED', teacherConfirmedAt: now },
     });
 
     res.json(updated);
@@ -423,13 +424,18 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
       refundAmount = booking.totalPrice;
       refundDesc = `Full refund - Teacher cancelled: ${booking.skill.title}`;
     } else {
-      const hoursUntilSession = (new Date(booking.scheduledAt) - new Date()) / (1000 * 60 * 60);
-      if (hoursUntilSession >= 24) {
+      // New cancellation policy:
+      // - If learner cancels BEFORE teacher confirmed (PENDING): full refund (100%)
+      // - If learner cancels AFTER teacher confirmed (CONFIRMED): 50% refund
+      if (booking.status === 'PENDING') {
         refundAmount = booking.totalPrice;
-        refundDesc = `Full refund - Cancelled 24h+ before session: ${booking.skill.title}`;
-      } else {
+        refundDesc = `Full refund - Learner cancelled before teacher confirmed: ${booking.skill.title}`;
+      } else if (booking.status === 'CONFIRMED') {
         refundAmount = roundSkc(booking.totalPrice * 0.5);
-        refundDesc = `50% refund - Cancelled within 24h: ${booking.skill.title}`;
+        refundDesc = `50% refund - Learner cancelled after teacher confirmed: ${booking.skill.title}`;
+      } else {
+        refundAmount = 0;
+        refundDesc = `No refund for this cancellation: ${booking.skill.title}`;
       }
     }
 

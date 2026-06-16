@@ -59,10 +59,26 @@ router.post('/tiers', authenticate, requireAdmin, async (req, res) => {
     const { amount, skc, active = true } = req.body;
     if (!amount || !skc) return res.status(400).json({ message: 'amount and skc are required' });
 
-    const tier = await prisma.paymentTier.create({ data: { amount: Number(amount), skc: Number(skc), active: Boolean(active) } });
+    // Use upsert so creating the same amount twice doesn't error (idempotent)
+    const tier = await prisma.paymentTier.upsert({
+      where: { amount: Number(amount) },
+      update: { skc: Number(skc), active: Boolean(active) },
+      create: { amount: Number(amount), skc: Number(skc), active: Boolean(active) },
+    });
+
     res.status(201).json(tier);
   } catch (error) {
     console.error('Create tier error:', error);
+    // If unique constraint still occurs for other reasons, return existing tier if possible
+    if (error?.code === 'P2002' && error?.meta?.target?.includes('amount')) {
+      try {
+        const existing = await prisma.paymentTier.findUnique({ where: { amount: Number(req.body.amount) } });
+        if (existing) return res.status(200).json(existing);
+      } catch (e) {
+        console.error('Fallback fetch tier error:', e);
+      }
+    }
+
     res.status(500).json({ message: 'Server error' });
   }
 });

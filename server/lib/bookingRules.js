@@ -49,46 +49,10 @@ async function createTransaction(prismaClient, userId, type, amount, description
 }
 
 async function expirePendingBookings(prismaClient) {
-  const cutoff = new Date(Date.now() - 24 * MS_PER_HOUR);
-  const expiredBookings = await prismaClient.booking.findMany({
-    where: {
-      status: 'PENDING',
-      createdAt: { lte: cutoff },
-    },
-    include: {
-      skill: { select: { title: true } },
-    },
-  });
-
-  for (const booking of expiredBookings) {
-    await prismaClient.$transaction(async (tx) => {
-      const current = await tx.booking.findUnique({
-        where: { id: booking.id },
-        include: { skill: { select: { title: true } } },
-      });
-
-      if (!current || current.status !== 'PENDING') return;
-
-      await tx.booking.update({
-        where: { id: current.id },
-        data: {
-          status: 'CANCELLED',
-          cancelReason: 'Auto-cancelled because teacher did not respond within 24 hours',
-        },
-      });
-
-      await createTransaction(
-        tx,
-        current.learnerId,
-        'REFUND',
-        current.totalPrice,
-        `Full refund - booking expired: ${current.skill.title}`,
-        current.id
-      );
-    });
-  }
-
-  return expiredBookings.length;
+  // Auto-expiry/cancellation of PENDING bookings has been disabled.
+  // We rely on explicit user/teacher/admin cancellation now.
+  // Keep the function signature for callers, return 0 to indicate no expirations processed.
+  return 0;
 }
 
 module.exports = {
