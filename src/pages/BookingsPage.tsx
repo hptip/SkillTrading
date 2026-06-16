@@ -46,7 +46,11 @@ export const BookingsPage = () => {
     setActionLoading(true);
     try {
       const { type, booking } = actionModal;
-      if (type === 'confirm') await bookingsApi.confirm(booking.id);
+      if (type === 'confirm') {
+        // Teacher should call teacherConfirm (PUT) to accept booking; learners call confirm (POST) to confirm completion
+        if (role === 'teacher') await bookingsApi.teacherConfirm(booking.id);
+        else await bookingsApi.confirm(booking.id);
+      }
       else if (type === 'reject') await bookingsApi.reject(booking.id, actionReason);
       else if (type === 'complete') await bookingsApi.complete(booking.id);
       else if (type === 'cancel') await bookingsApi.cancel(booking.id, actionReason);
@@ -178,7 +182,7 @@ export const BookingsPage = () => {
 
           {actionModal?.type === 'cancel' && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
-              <strong>Refund policy:</strong> Cancelling 24h+ before → 100% refund. Within 24h → 50% refund.
+              <strong>Refund policy:</strong> Learner cancel before teacher accepts (PENDING) → 100% refund. If teacher already accepted (CONFIRMED) → 50% refund.
             </div>
           )}
 
@@ -298,6 +302,20 @@ const BookingCard = ({ booking, role, onConfirm, onReject, onComplete, onCancel,
 
             {booking.message && (
               <p className="mt-2 text-xs text-gray-400 italic">"{booking.message}"</p>
+            )}
+
+            {/* Status hints for learners/teachers */}
+            {role === 'learner' && booking.status === 'PENDING' && (
+              <p className="mt-2 text-sm text-gray-600">Awaiting teacher acceptance.</p>
+            )}
+            {role === 'learner' && booking.status === 'CONFIRMED' && (
+              <p className="mt-2 text-sm text-gray-600">Teacher accepted this booking.</p>
+            )}
+            {role === 'teacher' && booking.status === 'PENDING' && (
+              <p className="mt-2 text-sm text-gray-600">You have a pending request to accept.</p>
+            )}
+            {role === 'teacher' && booking.status === 'CONFIRMED' && booking.teacherConfirmedAt && (
+              <p className="mt-2 text-sm text-gray-600">Accepted at {format(new Date(booking.teacherConfirmedAt), 'dd MMM yyyy, HH:mm')}</p>
             )}
 
             {booking.cancelReason && (

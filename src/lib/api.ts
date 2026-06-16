@@ -77,6 +77,8 @@ export const bookingsApi = {
   create: (data: { skillId: number; scheduledAt: string; durationHours?: number; message?: string }) =>
     api.post('/bookings', data),
   confirm: (id: number) => api.post(`/bookings/${id}/confirm`),
+  // Teacher confirmation (accept booking) uses PUT
+  teacherConfirm: (id: number) => api.put(`/bookings/${id}/confirm`),
   reject: (id: number, reason?: string) => api.put(`/bookings/${id}/reject`, { reason }),
   complete: (id: number) => api.put(`/bookings/${id}/complete`),
   cancel: (id: number, reason?: string) => api.put(`/bookings/${id}/cancel`, { reason }),
