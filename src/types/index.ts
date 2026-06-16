@@ -60,6 +60,9 @@ export interface Booking {
   slotEndTime?: string;
   totalPrice: number;
   status: BookingStatus;
+  teacherConfirmedAt?: string;
+  teacherDoneAt?: string;
+  learnerConfirmedAt?: string;
   message?: string;
   disputeReason?: string;
   cancelReason?: string;

@@ -53,6 +53,7 @@ export const BookingsPage = () => {
       }
       else if (type === 'reject') await bookingsApi.reject(booking.id, actionReason);
       else if (type === 'complete') await bookingsApi.complete(booking.id);
+      else if (type === 'mark-done') await bookingsApi.markDone(booking.id);
       else if (type === 'cancel') await bookingsApi.cancel(booking.id, actionReason);
       else if (type === 'dispute') await bookingsApi.dispute(booking.id, actionReason);
       setActionModal(null);
@@ -143,6 +144,7 @@ export const BookingsPage = () => {
               onConfirm={() => setActionModal({ type: 'confirm', booking })}
               onReject={() => setActionModal({ type: 'reject', booking })}
               onComplete={() => setActionModal({ type: 'complete', booking })}
+              onMarkDone={() => setActionModal({ type: 'mark-done', booking })}
               onCancel={() => setActionModal({ type: 'cancel', booking })}
               onDispute={() => setActionModal({ type: 'dispute', booking })}
               onReview={() => setReviewModal(booking)}
@@ -158,6 +160,7 @@ export const BookingsPage = () => {
         title={
           actionModal?.type === 'confirm' ? 'Confirm Booking'
           : actionModal?.type === 'reject' ? 'Reject Booking'
+          : actionModal?.type === 'mark-done' ? 'Mark as Done'
           : actionModal?.type === 'complete' ? 'Mark as Completed'
           : actionModal?.type === 'cancel' ? 'Cancel Booking'
           : 'Report Dispute'
@@ -188,6 +191,9 @@ export const BookingsPage = () => {
 
           {actionModal?.type === 'confirm' && (
             <p className="text-gray-600 text-sm">Confirm this booking? The learner's SKC will remain held until session completion.</p>
+          )}
+          {actionModal?.type === 'mark-done' && (
+            <p className="text-gray-600 text-sm">Record that you (teacher) have completed the session. Learner can confirm within 12 hours before auto-confirm.</p>
           )}
           {actionModal?.type === 'complete' && (
             <p className="text-gray-600 text-sm">Mark this session as completed? Teacher will receive 95% of the booking amount.</p>
@@ -252,6 +258,7 @@ interface BookingCardProps {
   onConfirm: () => void;
   onReject: () => void;
   onComplete: () => void;
+  onMarkDone?: () => void;
   onCancel: () => void;
   onDispute: () => void;
   onReview: () => void;
@@ -344,10 +351,19 @@ const BookingCard = ({ booking, role, onConfirm, onReject, onComplete, onCancel,
               </>
             )}
 
-            {/* Complete (both) */}
-            {booking.status === 'CONFIRMED' && (
-              <Button size="sm" variant="success" onClick={onComplete} icon={<CheckCheck className="w-3.5 h-3.5" />}>
-                Complete
+            {/* Teacher: mark done; Learner: confirm completion */}
+            {booking.status === 'CONFIRMED' && role === 'teacher' && !booking.teacherDoneAt && (
+              <Button size="sm" variant="success" onClick={() => onMarkDone && onMarkDone()} icon={<CheckCheck className="w-3.5 h-3.5" />}>
+                Mark as done
+              </Button>
+            )}
+            {booking.status === 'CONFIRMED' && role === 'teacher' && booking.teacherDoneAt && (
+              <span className="text-sm text-gray-500">Marked done: {format(new Date(booking.teacherDoneAt), 'dd MMM yyyy, HH:mm')}</span>
+            )}
+
+            {booking.status === 'CONFIRMED' && role === 'learner' && booking.teacherDoneAt && !booking.learnerConfirmedAt && (
+              <Button size="sm" variant="success" onClick={onConfirm} icon={<CheckCheck className="w-3.5 h-3.5" />}>
+                Confirm completed
               </Button>
             )}
 

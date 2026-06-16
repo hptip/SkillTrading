@@ -285,6 +285,25 @@ router.post('/:id/confirm', authenticate, async (req, res) => {
   }
 });
 
+// Teacher marks the session as done (records teacherDoneAt)
+router.post('/:id/mark-done', authenticate, async (req, res) => {
+  try {
+    const bookingId = parseInt(req.params.id);
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (booking.teacherId !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
+    if (booking.status !== 'CONFIRMED') return res.status(400).json({ message: 'Booking must be CONFIRMED to mark done' });
+
+    const now = new Date();
+    const updated = await prisma.booking.update({ where: { id: bookingId }, data: { teacherDoneAt: now } });
+
+    res.json({ message: 'Teacher marked session as done', booking: updated });
+  } catch (error) {
+    console.error('Mark done error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Confirm booking (Teacher)
 router.put('/:id/confirm', authenticate, async (req, res) => {
   try {

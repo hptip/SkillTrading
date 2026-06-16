@@ -70,6 +70,7 @@ model Booking {
   slotEndTime               String?
   timezone                  String        @default("Asia/Ho_Chi_Minh")
   teacherConfirmedAt        DateTime?
+  teacherDoneAt             DateTime?
   learnerConfirmedAt        DateTime?
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
